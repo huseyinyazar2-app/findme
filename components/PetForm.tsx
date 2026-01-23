@@ -1,11 +1,11 @@
 
 import React, { useState, useEffect } from 'react';
-import { UserProfile, PetProfile, PetType, PrivacyField } from '../types';
+import { UserProfile, PetProfile, PetType } from '../types';
 import { TURKEY_CITIES, CITY_NAMES, TEMPERAMENT_OPTIONS, formatPhoneNumber } from '../constants';
 import { Input } from './ui/Input';
 import { PrivacyToggle } from './ui/Toggle';
 import { 
-  Camera, ChevronDown, Dog, Home, Save, ShieldAlert, User, Edit2, ShieldCheck, UserCheck, Activity, Loader2
+  Camera, ChevronDown, Dog, Home, Save, ShieldAlert, UserCheck, Activity, Loader2, ShieldCheck
 } from 'lucide-react';
 import { uploadPetPhoto } from '../services/dbService';
 
@@ -52,6 +52,11 @@ export const PetForm: React.FC<PetFormProps> = ({ user, onUpdateUser, initialPet
              });
              setCustomPetType(initialPetData.type); // Fill the input box
         }
+        
+        // Check custom temperament
+        if (initialPetData.temperament?.value && !TEMPERAMENT_OPTIONS.includes(initialPetData.temperament.value)) {
+            setIsCustomTemperament(true);
+        }
     }
   }, [initialPetData]);
 
@@ -71,12 +76,14 @@ export const PetForm: React.FC<PetFormProps> = ({ user, onUpdateUser, initialPet
 
     setPetData(prev => {
         const currentField = prev[key];
-        if (typeof currentField === 'object' && currentField !== null && 'value' in currentField) {
+        // Check if currentField is a PrivacyField object (has 'value' and 'isPublic')
+        if (currentField && typeof currentField === 'object' && 'value' in currentField) {
             return {
                 ...prev,
                 [key]: { ...currentField, [fieldKey]: value }
             };
         }
+        // If it's a primitive (like microchip string), we just update it directly
         return { ...prev, [key]: value };
     });
   };
@@ -171,7 +178,7 @@ export const PetForm: React.FC<PetFormProps> = ({ user, onUpdateUser, initialPet
 
   const currentSelectValue = TEMPERAMENT_OPTIONS.includes(petData.temperament?.value || '') 
     ? petData.temperament?.value 
-    : (isCustomTemperament || petData.temperament?.value ? 'OTHER' : '');
+    : (isCustomTemperament || (petData.temperament?.value && petData.temperament.value.length > 0) ? 'OTHER' : '');
 
   const districtOptions = user.city && TURKEY_CITIES[user.city] 
     ? [...TURKEY_CITIES[user.city], "Diğer"] 
