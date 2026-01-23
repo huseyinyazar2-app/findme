@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { UserProfile, PetProfile, PetType, PrivacyField } from '../types';
 import { TURKEY_CITIES, CITY_NAMES, TEMPERAMENT_OPTIONS, formatPhoneNumber } from '../constants';
@@ -430,4 +431,102 @@ export const PetForm: React.FC<PetFormProps> = ({ user, onUpdateUser, initialPet
                             value={petData.sizeInfo?.value} 
                             onChange={(e) => updatePetField('sizeInfo', 'value', e.target.value)}
                             placeholder="Orta boy, 15kg civarı"
-                            className="!mb-0 !bg-white
+                            className="!mb-0 !bg-white dark:!bg-black/40 !border-slate-300 dark:!border-gray-800 focus:!border-matrix-500/50"
+                        />
+                    </div>
+                    
+                    <div>
+                        <div className="flex justify-between items-center mb-1">
+                             <label className="text-sm font-medium text-slate-600 dark:text-gray-400">Huy Bilgisi</label>
+                             <PrivacyToggle isPublic={petData.temperament?.isPublic || false} onChange={(v) => updatePetField('temperament', 'isPublic', v)} />
+                        </div>
+                        <div className="relative">
+                            <select 
+                                className="w-full bg-white dark:bg-black/40 border border-slate-300 dark:border-gray-800 rounded-xl p-3 text-sm appearance-none text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-matrix-500/50 transition-all mb-2"
+                                value={currentSelectValue}
+                                onChange={handleTemperamentSelect}
+                            >
+                                <option value="">Seçiniz</option>
+                                {TEMPERAMENT_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                                <option value="OTHER">Diğer (Kendim Yazacağım)</option>
+                            </select>
+                            <ChevronDown className="absolute right-3 top-3.5 text-slate-500 pointer-events-none" size={16} />
+                            
+                            {isCustomTemperament && (
+                                <Input 
+                                    placeholder="Huy bilgisini buraya yazın..."
+                                    value={petData.temperament?.value || ''}
+                                    onChange={(e) => updatePetField('temperament', 'value', e.target.value)}
+                                    className="!mb-0 !bg-white dark:!bg-black/40 animate-in fade-in slide-in-from-top-1"
+                                />
+                            )}
+                        </div>
+                    </div>
+
+                     <div>
+                        <div className="flex justify-between items-center mb-1">
+                            <label className="text-sm font-medium text-slate-600 dark:text-gray-400 flex items-center gap-1">
+                                <ShieldAlert size={14} className="text-red-500" /> Sağlık Uyarısı
+                            </label>
+                            <PrivacyToggle isPublic={petData.healthWarning?.isPublic || false} onChange={(v) => updatePetField('healthWarning', 'isPublic', v)} />
+                        </div>
+                        <Input 
+                            value={petData.healthWarning?.value} 
+                            onChange={(e) => updatePetField('healthWarning', 'value', e.target.value)}
+                            placeholder="Alerjisi var, ilaç kullanıyor..."
+                            className="!mb-0 !bg-white dark:!bg-black/40 !border-red-200 dark:!border-red-900/30 focus:!border-red-500/50"
+                        />
+                    </div>
+                </div>
+            </div>
+
+            {/* Part 3: Professional Info (Optional) */}
+            <div className="bg-white dark:bg-dark-surface/50 p-5 rounded-2xl border border-slate-200 dark:border-gray-800/60 backdrop-blur-sm space-y-4 shadow-sm transition-colors duration-300">
+                <div className="flex items-center gap-2 text-slate-500 dark:text-gray-400 mb-2">
+                    <ShieldCheck size={18} />
+                    <h3 className="font-semibold text-sm">Veteriner & Çip</h3>
+                </div>
+                
+                 <div>
+                    <div className="flex justify-between items-center mb-1">
+                        <label className="text-xs font-medium text-slate-500 dark:text-gray-400">Veteriner / Klinik (Tel)</label>
+                        <PrivacyToggle isPublic={petData.vetInfo?.isPublic || false} onChange={(v) => updatePetField('vetInfo', 'isPublic', v)} />
+                    </div>
+                    <Input 
+                        type="tel"
+                        value={petData.vetInfo?.value} 
+                        onChange={(e) => updatePetField('vetInfo', 'value', formatPhoneNumber(e.target.value))}
+                        placeholder="0212 ..."
+                        className="!mb-0"
+                    />
+                </div>
+
+                <div>
+                    <label className="block text-xs font-medium text-slate-500 dark:text-gray-400 mb-1">
+                        Mikroçip No (Sadece Sahibi Görür)
+                    </label>
+                    <Input 
+                        value={petData.microchip} 
+                        onChange={(e) => setPetData({...petData, microchip: e.target.value})}
+                        placeholder="15 haneli çip numarası"
+                        className="!mb-0 font-mono text-sm tracking-wider bg-slate-50 dark:bg-dark-input/50"
+                    />
+                </div>
+            </div>
+        </section>
+
+        {/* Submit Button */}
+        <div className="pt-4">
+            <button 
+                type="submit" 
+                className="w-full bg-matrix-600 hover:bg-matrix-500 text-white py-4 rounded-2xl font-bold text-lg shadow-xl shadow-matrix-900/20 dark:shadow-matrix-900/50 transition-all active:scale-95 flex items-center justify-center gap-2"
+            >
+                <Save size={24} />
+                {isEditMode ? 'Değişiklikleri Kaydet' : 'Kaydı Tamamla'}
+            </button>
+        </div>
+
+      </form>
+    </div>
+  );
+};
