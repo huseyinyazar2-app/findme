@@ -1,0 +1,393 @@
+
+import React, { useState, useEffect } from 'react';
+import { Login } from './components/Login';
+import { PetForm } from './components/PetForm';
+import { Settings } from './components/Settings';
+import { InfoSummary } from './components/InfoSummary';
+import { LostMode } from './components/LostMode';
+import { About } from './components/About';
+import { FinderView } from './components/FinderView';
+import { UserProfile, PetProfile } from './types';
+import { Settings as SettingsIcon, LogOut, FileText, PlusCircle, Siren, Info, RefreshCw } from 'lucide-react';
+import { loginOrRegister, getPetForUser, savePetForUser, updateUserProfile, checkQRCode, getPublicPetByQr, supabase } from './services/dbService';
+import { APP_VERSION } from './constants';
+
+const App: React.FC = () => {
+  const [user, setUser] = useState<UserProfile | null>(null);
+  const [petProfile, setPetProfile] = useState<PetProfile | null>(null);
+  
+  // Finder Mode State
+  const [isFinderMode, setIsFinderMode] = useState(false);
+  const [finderPet, setFinderPet] = useState<PetProfile | null>(null);
+  const [finderOwner, setFinderOwner] = useState<UserProfile | undefined>(undefined);
+  
+  // Navigation State
+  const [currentView, setCurrentView] = useState<'home' | 'info' | 'settings' | 'lost' | 'about'>('home');
+  
+  // Unsaved Changes State (Protection for Lost Mode)
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+
+  // QR Handling State
+  const [qrCode, setQrCode] = useState<string | null>(null);
+  const [qrMessage, setQrMessage] = useState<string>('');
+
+  // Update Detection State
+  const [updateAvailable, setUpdateAvailable] = useState(false);
+
+  // Theme Management
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
+    if (typeof window !== 'undefined') {
+        const saved = localStorage.getItem('matrixc_theme');
+        if (saved) return saved as 'light' | 'dark';
+        if (window.matchMedia('(prefers-color-scheme: dark)').matches) return 'dark';
+    }
+    return 'dark';
+  });
+
+  useEffect(() => {
+    const root = window.document.documentElement;
+    if (theme === 'dark') {
+        root.classList.add('dark');
+    } else {
+        root.classList.remove('dark');
+    }
+    localStorage.setItem('matrixc_theme', theme);
+  }, [theme]);
+
+  // --- INITIALIZATION & QR CHECK & UPDATE CHECK ---
+  useEffect(() => {
+    const initApp = async () => {
+        // 1. Version Check
+        const savedVersion = localStorage.getItem('matrixc_app_version');
+        if (savedVersion && savedVersion !== APP_VERSION) {
+             setUpdateAvailable(true);
+        }
+        if (!savedVersion) {
+            localStorage.setItem('matrixc_app_version', APP_VERSION);
+        }
+
+        // 2. Check URL for QR Code (/qr/CODE)
+        const path = window.location.pathname;
+        const qrMatch = path.match(/\/qr\/([a-zA-Z0-9]+)/);
+        
+        if (qrMatch && qrMatch[1]) {
+            const code = qrMatch[1];
+            setQrCode(code);
+            
+            // Check Database for this QR
+            const check = await checkQRCode(code);
+            
+            if (check.valid) {
+                if (check.status === 'boş') {
+                    setQrMessage('Yeni etiket! Kayıt oluşturmak için paketten çıkan PIN kodunu giriniz.');
+                } else if (check.status === 'dolu') {
+                    // --- CRITICAL CHANGE: Check if lost immediately ---
+                    const publicPet = await getPublicPetByQr(code);
+                    
+                    if (publicPet && publicPet.lostStatus?.isActive) {
+                        // IT IS LOST! Show Finder View immediately.
+                        setIsFinderMode(true);
+                        setFinderPet(publicPet);
+                        
+                        // Try to get basic owner info for contact buttons
+                        // Fetching specific user for contact info (only if needed by finder view)
+                        // In real app, we might need a dedicated public endpoint
+                        // For now we assume we can fetch basic user by username (shortCode)
+                        const { data: ownerData } = await supabase
+                            .from('Find_Users')
+                            .select('*')
+                            .eq('username', code)
+                            .single();
+                        
+                        if (ownerData) {
+                             setFinderOwner({
+                                 username: ownerData.username,
+                                 email: ownerData.email,
+                                 phone: ownerData.phone,
+                                 contactPreference: ownerData.contact_preference,
+                                 isEmailVerified: false // not needed here
+                             } as UserProfile);
+                        }
+                    } else {
+                        // Not lost, but registered. Ask for PIN to login as owner.
+                        setQrMessage('Kayıtlı etiket. Yönetim paneli için PIN kodunu giriniz.');
+                    }
+                }
+            } else {
+                setQrMessage('Geçersiz veya Tanımsız QR Kod.');
+            }
+        }
+
+        // 3. Check Local Session (Simple persistence)
+        const savedUserStr = localStorage.getItem('matrixc_user_session');
+        if (savedUserStr && !isFinderMode) {
+             const sessionUser = JSON.parse(savedUserStr);
+             // If we are scanning a NEW QR code that doesn't match the session, logout implicitly or warn
+             // For now, if QR matches session username, auto login.
+             if (qrMatch && qrMatch[1] && sessionUser.username !== qrMatch[1]) {
+                 // Different user scanned, do not auto login from session
+                 return;
+             }
+
+             setUser(sessionUser);
+             const pet = await getPetForUser(sessionUser.username);
+             if (pet) {
+                 setPetProfile(pet);
+                 setCurrentView('info');
+             } else {
+                 setCurrentView('home');
+             }
+        }
+    };
+
+    initApp();
+  }, []);
+
+  const reloadApp = () => {
+    localStorage.setItem('matrixc_app_version', APP_VERSION);
+    window.location.reload();
+  };
+
+  const handleLoginAuth = async (username: string, pass: string) => {
+    // Note: username here is the QR Code (shortCode), pass is the PIN
+    const result = await loginOrRegister(username, pass);
+
+    if (result.success && result.user) {
+        setUser(result.user);
+        localStorage.setItem('matrixc_user_session', JSON.stringify(result.user));
+
+        if (result.isNew) {
+            // New Registration
+            setPetProfile(null);
+            setCurrentView('home'); // Go to PetForm
+        } else {
+            // Existing User Login
+            const pet = await getPetForUser(result.user.username);
+            if (pet) {
+                setPetProfile(pet);
+                setCurrentView('info');
+            } else {
+                // User exists but no pet data yet (rare edge case)
+                setPetProfile(null);
+                setCurrentView('home');
+            }
+        }
+    } else {
+        throw new Error(result.error || "Giriş yapılamadı");
+    }
+  };
+
+  const handleLogout = () => {
+    if (hasUnsavedChanges) {
+        if (!window.confirm("Kaydedilmemiş değişiklikler var. Çıkış yapmak istediğinize emin misiniz?")) {
+            return;
+        }
+    }
+    setUser(null);
+    setPetProfile(null);
+    localStorage.removeItem('matrixc_user_session');
+    
+    // If there is a QR code in URL, reload page to re-trigger the check logic
+    if (qrCode) {
+        window.location.reload();
+    } else {
+        setCurrentView('home');
+    }
+    setHasUnsavedChanges(false);
+  };
+
+  const handleUpdateUser = async (updatedUser: UserProfile) => {
+    setUser(updatedUser);
+    localStorage.setItem('matrixc_user_session', JSON.stringify(updatedUser));
+    await updateUserProfile(updatedUser);
+  };
+
+  const handleSavePet = async (data: PetProfile) => {
+    if (!user) return;
+    setPetProfile(data);
+    const success = await savePetForUser(user, data);
+    
+    if (success) {
+        setHasUnsavedChanges(false);
+        if (currentView === 'home') {
+            alert("Kayıt başarıyla oluşturuldu.");
+            setCurrentView('settings');
+            window.scrollTo(0, 0);
+        }
+    } else {
+        alert("Kaydetme sırasında bir hata oluştu.");
+    }
+  };
+
+  const toggleTheme = () => {
+    setTheme(prev => prev === 'dark' ? 'light' : 'dark');
+  };
+
+  const changeView = (view: 'home' | 'info' | 'settings' | 'lost' | 'about') => {
+    if (currentView === view) return;
+    if (hasUnsavedChanges) {
+        const confirmLeave = window.confirm("Kaydedilmemiş değişiklikleriniz var. Kaydetmeden çıkmak istediğinize emin misiniz?");
+        if (!confirmLeave) return;
+        setHasUnsavedChanges(false);
+    }
+    setCurrentView(view);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // --- RENDER FINDER MODE ---
+  if (isFinderMode && finderPet) {
+      return (
+          <FinderView 
+             pet={finderPet} 
+             owner={finderOwner}
+             onLoginClick={() => setIsFinderMode(false)} 
+          />
+      );
+  }
+
+  // --- RENDER LOGIN ---
+  if (!user) {
+    return (
+        <div className="min-h-screen font-sans bg-slate-100 dark:bg-matrix-950 transition-colors duration-300">
+             {updateAvailable && (
+                <div onClick={reloadApp} className="fixed top-0 left-0 right-0 bg-matrix-600 text-white p-3 text-center text-sm font-bold cursor-pointer z-[100] animate-in slide-in-from-top flex items-center justify-center gap-2 shadow-lg">
+                    <RefreshCw size={18} className="animate-spin-slow" />
+                    Yeni versiyon ({APP_VERSION}) mevcut! Güncellemek için dokunun.
+                </div>
+            )}
+            <Login 
+                onLogin={handleLoginAuth} 
+                initialUsername={qrCode || undefined} 
+                qrStatusMessage={qrMessage}
+            />
+        </div>
+    );
+  }
+
+  // --- RENDER APP (Owner View) ---
+  const isHomeActive = currentView === 'home'; 
+  const isInfoActive = currentView === 'info';
+  const isLostActive = currentView === 'lost';
+  const isSettingsActive = currentView === 'settings';
+  const isAboutActive = currentView === 'about';
+
+  return (
+    <div className="min-h-screen font-sans flex flex-col bg-slate-100 dark:bg-matrix-950 transition-colors duration-300">
+      
+      {updateAvailable && (
+          <div onClick={reloadApp} className="fixed top-4 left-4 right-4 bg-matrix-600 dark:bg-matrix-500 text-white p-4 rounded-xl shadow-2xl z-[100] flex items-center justify-between cursor-pointer animate-in slide-in-from-top duration-500 border border-white/20">
+              <div className="flex items-center gap-3">
+                  <div className="bg-white/20 p-2 rounded-full">
+                      <RefreshCw size={20} className="animate-spin" />
+                  </div>
+                  <div>
+                      <h4 className="font-bold text-sm">Güncelleme Mevcut</h4>
+                      <p className="text-xs opacity-90">Sürüm {APP_VERSION} yüklendi. Yenilemek için dokunun.</p>
+                  </div>
+              </div>
+          </div>
+      )}
+
+      {/* Content Area */}
+      <div className="flex-1">
+        {currentView === 'home' && !petProfile && (
+            <PetForm 
+                user={user} 
+                onUpdateUser={handleUpdateUser} 
+                initialPetData={null}
+                onSave={handleSavePet}
+            />
+        )}
+        
+        {(currentView === 'info' || (currentView === 'home' && petProfile)) && (
+            <InfoSummary 
+                user={user}
+                pet={petProfile}
+                onUpdateUser={handleUpdateUser}
+                onSavePet={handleSavePet}
+            />
+        )}
+
+        {currentView === 'lost' && petProfile && (
+            <LostMode 
+                user={user}
+                pet={petProfile}
+                onSavePet={handleSavePet}
+                setHasUnsavedChanges={setHasUnsavedChanges}
+            />
+        )}
+
+        {currentView === 'settings' && (
+            <Settings 
+                user={user} 
+                onUpdateUser={handleUpdateUser}
+                currentTheme={theme}
+                onToggleTheme={toggleTheme}
+            />
+        )}
+
+        {currentView === 'about' && (
+            <About />
+        )}
+      </div>
+
+      {/* Bottom Navigation */}
+      <nav className="fixed bottom-0 left-0 right-0 bg-white/95 dark:bg-matrix-950/90 backdrop-blur-md border-t border-slate-200 dark:border-gray-800 pb-safe z-50 transition-colors duration-300">
+        <div className="grid grid-cols-5 h-16">
+            
+            {!petProfile ? (
+                <button 
+                    onClick={() => changeView('home')}
+                    className={`flex flex-col items-center gap-1 h-full justify-center transition-colors ${isHomeActive ? 'text-matrix-600 dark:text-matrix-500' : 'text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300'}`}
+                >
+                    <PlusCircle size={22} strokeWidth={isHomeActive ? 2.5 : 2} />
+                    <span className="text-[10px] font-medium">Kayıt</span>
+                </button>
+            ) : (
+                <button 
+                    onClick={() => changeView('info')}
+                    className={`flex flex-col items-center gap-1 h-full justify-center transition-colors ${isInfoActive ? 'text-matrix-600 dark:text-matrix-500' : 'text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300'}`}
+                >
+                    <FileText size={22} strokeWidth={isInfoActive ? 2.5 : 2} />
+                    <span className="text-[10px] font-medium">Bilgiler</span>
+                </button>
+            )}
+
+            <button 
+                 onClick={() => petProfile ? changeView('lost') : alert("Önce hayvan kaydı yapmalısınız.")}
+                 className={`flex flex-col items-center gap-1 h-full justify-center transition-colors ${isLostActive ? 'text-red-500' : 'text-gray-400 dark:text-gray-500 hover:text-red-500'}`}
+            >
+                <Siren size={22} strokeWidth={isLostActive ? 2.5 : 2} className={petProfile?.lostStatus?.isActive ? "animate-pulse text-red-500" : ""} />
+                <span className={`text-[10px] font-medium ${petProfile?.lostStatus?.isActive ? "text-red-500" : ""}`}>Kayıp</span>
+            </button>
+            
+            <button 
+                onClick={() => changeView('settings')}
+                className={`flex flex-col items-center gap-1 h-full justify-center transition-all ${isSettingsActive ? 'text-matrix-600 dark:text-matrix-500' : 'text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300'}`}
+            >
+                <SettingsIcon size={22} strokeWidth={isSettingsActive ? 2.5 : 2} />
+                <span className="text-[10px] font-medium">Ayarlar</span>
+            </button>
+
+            <button 
+                onClick={() => changeView('about')}
+                className={`flex flex-col items-center gap-1 h-full justify-center transition-all ${isAboutActive ? 'text-matrix-600 dark:text-matrix-500' : 'text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300'}`}
+            >
+                <Info size={22} strokeWidth={isAboutActive ? 2.5 : 2} />
+                <span className="text-[10px] font-medium">Hakkında</span>
+            </button>
+
+            <button 
+                onClick={handleLogout}
+                className="flex flex-col items-center gap-1 h-full justify-center text-red-500/70 hover:text-red-500 dark:text-red-400/70 dark:hover:text-red-400 transition-colors"
+            >
+                <LogOut size={22} strokeWidth={2} />
+                <span className="text-[10px] font-medium">Çıkış</span>
+            </button>
+        </div>
+      </nav>
+    </div>
+  );
+};
+
+export default App;
