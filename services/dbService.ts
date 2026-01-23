@@ -105,14 +105,18 @@ export const uploadPetPhoto = async (file: File): Promise<string | null> => {
 // --- Auth & User Operations ---
 
 /**
- * NEW LOGIC:
- * Authenticates using QR Short Code and PIN from QR_Kod table.
+ * NEW LOGIC (Strict Status Check):
+ * 1. Verify QR & PIN.
+ * 2. If status == 'boş' -> Register (isNew: true).
+ * 3. If status == 'dolu' -> Check Find_Users.
+ *    - User exists -> Login (isNew: false).
+ *    - User MISSING -> Fix Status to 'boş' AND Register (isNew: true).
  */
 export const loginOrRegister = async (shortCode: string, inputPin: string): Promise<{ success: boolean; user?: UserProfile; error?: string; isNew?: boolean }> => {
     try {
         console.log(`🔐 Giriş Denemesi: QR=${shortCode}, PIN=${inputPin}`);
 
-        // 1. Verify QR and PIN from QR_Kod table
+        // 1. ADIM: QR_Kod tablosundan PIN ve STATUS doğrula
         const { data: qrData, error: qrError } = await supabase
             .from('QR_Kod')
             .select('*')
@@ -121,66 +125,66 @@ export const loginOrRegister = async (shortCode: string, inputPin: string): Prom
 
         if (qrError) {
             console.error("❌ Login Sorgu Hatası:", qrError);
-            return { success: false, error: `Veritabanı hatası: ${qrError.message} (API Key veya Tablo adı kontrolü yapın)` };
+            return { success: false, error: `Veritabanı hatası: ${qrError.message}` };
         }
 
         if (!qrData) {
-            console.warn("⚠️ QR Kod veritabanında bulunamadı.");
             return { success: false, error: 'Geçersiz QR Kod' };
         }
 
-        console.log("✅ DB'den Gelen Veri:", qrData);
+        // PIN Kontrolü (String convert ve trim yaparak)
+        const dbPin = String(qrData.pin).trim();
+        const userPin = String(inputPin).trim();
 
-        // Check PIN (String comparison ensures types don't mismatch - CSV usually returns strings or numbers)
-        // CSV'de pin: 2222 veya 396049 gibi duruyor.
-        if (String(qrData.pin).trim() !== String(inputPin).trim()) {
-            console.warn(`⛔ Hatalı PIN. Beklenen: ${qrData.pin}, Girilen: ${inputPin}`);
+        if (dbPin !== userPin) {
+            console.warn(`⛔ Hatalı PIN. Beklenen: ${dbPin}, Girilen: ${userPin}`);
             return { success: false, error: 'Hatalı PIN Kodu' };
         }
 
-        // 2. Handle based on Status
-        if (qrData.status === 'boş') {
-            console.log("ℹ️ Durum: BOŞ - Kayıt akışı başlatılıyor.");
-            
-            // --- REGISTRATION FLOW ---
-            const { data: existingUser } = await supabase
-                .from('Find_Users')
-                .select('*')
-                .eq('qr_code', shortCode)
-                .single();
-            
-            if (existingUser) {
-                 console.log("⚠️ Kullanıcı var ama QR durumu 'boş'. Giriş yapılıyor.");
-                 return { success: true, user: mapDbUserToProfile(existingUser), isNew: false };
-            }
+        console.log(`✅ PIN Doğru. Status: ${qrData.status}`);
 
-            const tempUser: UserProfile = {
-                username: shortCode,
-                password: inputPin, 
-                email: '',
-                isEmailVerified: false,
-                contactPreference: 'Telefon' as any,
-                city: '',
-                district: ''
-            };
-            
+        // 2. ADIM: Status'a göre işlem yap
+        if (qrData.status === 'boş') {
+            // --- DURUM: BOŞ -> KAYIT MODU ---
+            console.log("ℹ️ Status 'boş'. Kayıt ekranına yönlendiriliyor.");
+            const tempUser = createTempProfile(shortCode, userPin);
             return { success: true, user: tempUser, isNew: true };
-            
+        
         } else {
-            console.log("ℹ️ Durum: DOLU - Giriş akışı başlatılıyor.");
-            // --- LOGIN FLOW (Status = 'dolu') ---
+            // --- DURUM: DOLU -> KULLANICI KONTROLÜ ---
             const { data: existingUser, error: findError } = await supabase
                 .from('Find_Users')
                 .select('*')
                 .eq('qr_code', shortCode) 
                 .single();
 
-            if (findError || !existingUser) {
-                console.error("❌ Kullanıcı profili bulunamadı hatası:", findError);
-                return { success: false, error: 'Bu QR koda bağlı kullanıcı profili bulunamadı. Lütfen yönetici ile iletişime geçin.' };
-            }
+            if (existingUser) {
+                // --- DURUM: DOLU VE KULLANICI VAR -> GİRİŞ BAŞARILI ---
+                console.log("ℹ️ Status 'dolu' ve kullanıcı mevcut. Giriş yapılıyor.");
+                
+                const profile = mapDbUserToProfile(existingUser);
+                
+                // Güvenlik: Veritabanında şifre boşsa, QR PIN'ini şifre olarak ata.
+                // Bu, ayarlar sayfasında şifre değiştirmek istediklerinde "Mevcut Şifre" olarak PIN'i kabul etmesini sağlar.
+                if (!profile.password || profile.password.trim() === '') {
+                    profile.password = dbPin;
+                }
 
-            return { success: true, user: mapDbUserToProfile(existingUser), isNew: false };
+                return { success: true, user: profile, isNew: false };
+            } else {
+                // --- DURUM: DOLU AMA KULLANICI YOK (HATALI DURUM) ---
+                console.warn("⚠️ Status 'dolu' ama Find_Users tablosunda kayıt yok! Veri düzeltiliyor...");
+                
+                // 1. Status'u 'boş' olarak düzelt
+                await supabase
+                    .from('QR_Kod')
+                    .update({ status: 'boş' })
+                    .eq('short_code', shortCode);
+                
+                // 2. Kayıt moduna yönlendir
+                const tempUser = createTempProfile(shortCode, userPin);
+                return { success: true, user: tempUser, isNew: true };
+            }
         }
 
     } catch (e: any) {
@@ -198,6 +202,7 @@ export const registerUserAfterForm = async (userProfile: UserProfile, shortCode:
         dbUser.qr_code = shortCode; // Ensure link
         dbUser.created_at = new Date().toISOString();
 
+        // 1. Insert User
         const { error: createError } = await supabase
             .from('Find_Users')
             .insert([dbUser]);
@@ -207,7 +212,7 @@ export const registerUserAfterForm = async (userProfile: UserProfile, shortCode:
             return false;
         }
 
-        // Update QR Status to 'dolu'
+        // 2. Update QR Status to 'dolu'
         const { error: updateError } = await supabase
             .from('QR_Kod')
             .update({ status: 'dolu' })
@@ -215,6 +220,8 @@ export const registerUserAfterForm = async (userProfile: UserProfile, shortCode:
 
         if (updateError) {
             console.error("QR durum güncelleme hatası:", updateError);
+        } else {
+            console.log("✅ Kayıt tamamlandı, Status 'dolu' yapıldı.");
         }
 
         return true;
@@ -243,8 +250,6 @@ export const updateUserProfile = async (user: UserProfile) => {
         }
 
         // 2. SYNC PASSWORD with QR_Kod Table (Update PIN)
-        // If the user changed their password, we must update the PIN in QR_Kod table
-        // so they can login next time.
         if (user.password) {
             console.log("🔄 Şifre değişikliği algılandı. QR PIN güncelleniyor...");
             const { error: pinError } = await supabase
@@ -254,7 +259,6 @@ export const updateUserProfile = async (user: UserProfile) => {
             
             if (pinError) {
                 console.error("❌ Kritik Hata: QR PIN güncellenemedi!", pinError);
-                // We might want to alert the user here, but return true for now as profile updated
             } else {
                 console.log("✅ QR PIN başarıyla senkronize edildi.");
             }
@@ -348,6 +352,18 @@ export const savePetForUser = async (user: UserProfile, pet: PetProfile) => {
 
 
 // --- Helpers ---
+
+function createTempProfile(username: string, pin: string): UserProfile {
+    return {
+        username: username,
+        password: pin, 
+        email: '',
+        isEmailVerified: false,
+        contactPreference: 'Telefon' as any,
+        city: '',
+        district: ''
+    };
+}
 
 function mapDbUserToProfile(dbUser: any): UserProfile {
     return {

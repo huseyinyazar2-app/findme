@@ -140,8 +140,12 @@ export const Settings: React.FC<SettingsProps> = ({ user, onUpdateUser, currentT
         return;
     }
 
-    const actualCurrentPass = user.password || "1234";
-    if (currentPass !== actualCurrentPass) {
+    // STRICT PASSWORD CHECK
+    // Ensure both are treated as strings and trimmed to avoid '1234' vs '1234 ' or 1234 vs '1234' issues
+    const actualCurrentPass = String(user.password || "").trim();
+    const inputCurrentPass = String(currentPass).trim();
+
+    if (inputCurrentPass !== actualCurrentPass) {
         setPassMessage({ type: 'error', text: "Mevcut şifrenizi yanlış girdiniz." });
         return;
     }
