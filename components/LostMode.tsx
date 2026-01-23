@@ -1,8 +1,9 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { PetProfile, LostStatus, UserProfile } from '../types';
-import { Siren, MapPin, Save, AlertTriangle, CheckCircle2, Navigation, Info, Lock, Unlock, Hand, ShieldCheck, KeyRound } from 'lucide-react';
+import { Siren, MapPin, Save, Info, Lock, Unlock, Hand, ShieldCheck, KeyRound, CheckCircle2, Navigation } from 'lucide-react';
 import { Input } from './ui/Input';
-import * as L from 'leaflet';
+import L from 'leaflet';
 
 // Leaflet Icon Setup - fixed for TypeScript without needing @ts-ignore
 const setupLeafletIcons = () => {
