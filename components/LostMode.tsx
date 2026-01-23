@@ -97,8 +97,7 @@ export const LostMode: React.FC<LostModeProps> = ({ user, pet, onSavePet, setHas
             touchZoom: false,
             scrollWheelZoom: false,
             doubleClickZoom: false,
-            boxZoom: false,
-            tap: false
+            boxZoom: false
         }).setView([initialLat, initialLng], initialZoom);
 
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -155,13 +154,11 @@ export const LostMode: React.FC<LostModeProps> = ({ user, pet, onSavePet, setHas
             leafletMap.current.touchZoom.enable();
             leafletMap.current.scrollWheelZoom.enable();
             leafletMap.current.doubleClickZoom.enable();
-            if (leafletMap.current.tap) leafletMap.current.tap.enable();
         } else {
             leafletMap.current.dragging.disable();
             leafletMap.current.touchZoom.disable();
             leafletMap.current.scrollWheelZoom.disable();
             leafletMap.current.doubleClickZoom.disable();
-            if (leafletMap.current.tap) leafletMap.current.tap.disable();
         }
     }
   }, [isMapInteractive]);
