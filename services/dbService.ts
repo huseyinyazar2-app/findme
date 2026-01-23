@@ -8,6 +8,8 @@ export { supabase };
 // --- QR Operations ---
 
 export const checkQRCode = async (shortCode: string) => {
+    console.log(`🔍 QR Kontrol Ediliyor: ${shortCode}`);
+    
     // 1. Check if QR exists in QR_Kod table
     const { data: qrData, error: qrError } = await supabase
         .from('QR_Kod')
@@ -15,15 +17,24 @@ export const checkQRCode = async (shortCode: string) => {
         .eq('short_code', shortCode)
         .single();
 
-    if (qrError || !qrData) {
+    if (qrError) {
+        console.error("❌ QR Kontrol Hatası (Supabase):", qrError);
+        // Genellikle RLS (Row Level Security) hatası olabilir.
+        return { valid: false, message: 'Veritabanı erişim hatası veya QR bulunamadı.' };
+    }
+
+    if (!qrData) {
+        console.warn("⚠️ QR Verisi boş döndü.");
         return { valid: false, message: 'Geçersiz QR Kod' };
     }
+
+    console.log("✅ QR Bulundu:", qrData);
 
     return { 
         valid: true, 
         status: qrData.status, // 'boş' or 'dolu'
         shortCode: qrData.short_code,
-        pin: qrData.pin // We need this internally to verify, but usually don't expose it to FE easily
+        pin: qrData.pin 
     };
 };
 
@@ -36,7 +47,7 @@ export const getPublicPetByQr = async (shortCode: string): Promise<PetProfile | 
     const { data: userData, error: userError } = await supabase
         .from('Find_Users')
         .select('id, username')
-        .eq('qr_code', shortCode) // Assuming 'qr_code' column stores the shortCode in Find_Users
+        .eq('qr_code', shortCode) 
         .single();
 
     if (userError || !userData) {
@@ -59,7 +70,7 @@ export const getPublicPetByQr = async (shortCode: string): Promise<PetProfile | 
         id: petData.id,
         ...petData.pet_data,
         lostStatus: petData.lost_status,
-        ownerUsername: userData.username // Helper to identify owner if needed
+        ownerUsername: userData.username 
     } as PetProfile;
 };
 
@@ -96,12 +107,11 @@ export const uploadPetPhoto = async (file: File): Promise<string | null> => {
 /**
  * NEW LOGIC:
  * Authenticates using QR Short Code and PIN from QR_Kod table.
- * 
- * Scenario 1 (Status='boş'): Verifies PIN, if correct -> Returns success (isNew=true).
- * Scenario 2 (Status='dolu'): Verifies PIN, if correct -> Fetches linked User -> Returns user (isNew=false).
  */
 export const loginOrRegister = async (shortCode: string, inputPin: string): Promise<{ success: boolean; user?: UserProfile; error?: string; isNew?: boolean }> => {
     try {
+        console.log(`🔐 Giriş Denemesi: QR=${shortCode}, PIN=${inputPin}`);
+
         // 1. Verify QR and PIN from QR_Kod table
         const { data: qrData, error: qrError } = await supabase
             .from('QR_Kod')
@@ -109,20 +119,29 @@ export const loginOrRegister = async (shortCode: string, inputPin: string): Prom
             .eq('short_code', shortCode)
             .single();
 
-        if (qrError || !qrData) {
+        if (qrError) {
+            console.error("❌ Login Sorgu Hatası:", qrError);
+            return { success: false, error: `Veritabanı hatası: ${qrError.message} (Tablo adı veya RLS kontrolü yapın)` };
+        }
+
+        if (!qrData) {
+            console.warn("⚠️ QR Kod veritabanında bulunamadı.");
             return { success: false, error: 'Geçersiz QR Kod' };
         }
 
-        // Check PIN
-        if (String(qrData.pin) !== String(inputPin)) {
+        console.log("✅ DB'den Gelen Veri:", qrData);
+
+        // Check PIN (String comparison ensures types don't mismatch)
+        if (String(qrData.pin).trim() !== String(inputPin).trim()) {
+            console.warn(`⛔ Hatalı PIN. Beklenen: ${qrData.pin}, Girilen: ${inputPin}`);
             return { success: false, error: 'Hatalı PIN Kodu' };
         }
 
         // 2. Handle based on Status
         if (qrData.status === 'boş') {
+            console.log("ℹ️ Durum: BOŞ - Kayıt akışı başlatılıyor.");
+            
             // --- REGISTRATION FLOW ---
-            // If status is empty and PIN matches, we allow them to create a user profile.
-            // But first check if a user accidentally exists (orphan record)
             const { data: existingUser } = await supabase
                 .from('Find_Users')
                 .select('*')
@@ -130,15 +149,13 @@ export const loginOrRegister = async (shortCode: string, inputPin: string): Prom
                 .single();
             
             if (existingUser) {
-                // If user exists but status was 'boş' (inconsistent state), log them in
+                 console.log("⚠️ Kullanıcı var ama QR durumu 'boş'. Giriş yapılıyor.");
                  return { success: true, user: mapDbUserToProfile(existingUser), isNew: false };
             }
 
-            // Return success but no user yet - Frontend will show PetForm to create the user
-            // We create a temporary "User Profile" object to prepopulate the form
             const tempUser: UserProfile = {
                 username: shortCode,
-                password: inputPin, // Store PIN as password locally
+                password: inputPin, 
                 email: '',
                 isEmailVerified: false,
                 contactPreference: 'Telefon' as any,
@@ -149,24 +166,25 @@ export const loginOrRegister = async (shortCode: string, inputPin: string): Prom
             return { success: true, user: tempUser, isNew: true };
             
         } else {
+            console.log("ℹ️ Durum: DOLU - Giriş akışı başlatılıyor.");
             // --- LOGIN FLOW (Status = 'dolu') ---
-            // Fetch the user linked to this QR code
             const { data: existingUser, error: findError } = await supabase
                 .from('Find_Users')
                 .select('*')
-                .eq('qr_code', shortCode) // Link by QR code
+                .eq('qr_code', shortCode) 
                 .single();
 
             if (findError || !existingUser) {
+                console.error("❌ Kullanıcı profili bulunamadı hatası:", findError);
                 return { success: false, error: 'Bu QR koda bağlı kullanıcı profili bulunamadı.' };
             }
 
             return { success: true, user: mapDbUserToProfile(existingUser), isNew: false };
         }
 
-    } catch (e) {
-        console.error("Auth error", e);
-        return { success: false, error: 'Sunucu hatası' };
+    } catch (e: any) {
+        console.error("🔥 Kritik Auth hatası:", e);
+        return { success: false, error: `Sunucu hatası: ${e.message}` };
     }
 };
 
@@ -184,15 +202,19 @@ export const registerUserAfterForm = async (userProfile: UserProfile, shortCode:
             .insert([dbUser]);
 
         if (createError) {
-            console.error(createError);
+            console.error("Kayıt oluşturma hatası:", createError);
             return false;
         }
 
         // Update QR Status to 'dolu'
-        await supabase
+        const { error: updateError } = await supabase
             .from('QR_Kod')
             .update({ status: 'dolu' })
             .eq('short_code', shortCode);
+
+        if (updateError) {
+            console.error("QR durum güncelleme hatası:", updateError);
+        }
 
         return true;
     } catch (e) {
