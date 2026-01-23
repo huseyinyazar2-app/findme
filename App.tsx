@@ -90,9 +90,6 @@ const App: React.FC = () => {
                         setFinderPet(publicPet);
                         
                         // Try to get basic owner info for contact buttons
-                        // Fetching specific user for contact info (only if needed by finder view)
-                        // In real app, we might need a dedicated public endpoint
-                        // For now we assume we can fetch basic user by username (shortCode)
                         const { data: ownerData } = await supabase
                             .from('Find_Users')
                             .select('*')
@@ -100,11 +97,16 @@ const App: React.FC = () => {
                             .single();
                         
                         if (ownerData) {
+                             // Map all necessary fields including Emergency Contact
                              setFinderOwner({
                                  username: ownerData.username,
                                  email: ownerData.email,
                                  phone: ownerData.phone,
+                                 fullName: ownerData.full_name,
                                  contactPreference: ownerData.contact_preference,
+                                 emergencyContactName: ownerData.emergency_contact_name,
+                                 emergencyContactEmail: ownerData.emergency_contact_email,
+                                 emergencyContactPhone: ownerData.emergency_contact_phone,
                                  isEmailVerified: false // not needed here
                              } as UserProfile);
                         }
