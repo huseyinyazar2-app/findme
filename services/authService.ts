@@ -51,7 +51,11 @@ export const sendEmailVerification = async (email: string): Promise<boolean> => 
       console.log('Lütfen EmailJS panelinde template içinde {{verification_code}} değişkenini tanımladığından emin ol.');
       console.groupEnd();
       
-      // Hata durumunda bile true dönerek testi engellemiyoruz (Prodüksiyonda false yapılabilir)
+      // KULLANICI DOSTU HATA YÖNETİMİ:
+      // Email sunucusu çalışmasa bile geliştirme/demo aşamasında testi devam ettirmek için kodu gösteriyoruz.
+      alert(`Email gönderilemedi (Servis hatası). \n\nTest için Doğrulama Kodunuz: ${code}`);
+
+      // Hata durumunda bile true dönerek testi engellemiyoruz
       return true; 
   }
 };

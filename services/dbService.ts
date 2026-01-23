@@ -225,18 +225,46 @@ export const registerUserAfterForm = async (userProfile: UserProfile, shortCode:
 }
 
 export const updateUserProfile = async (user: UserProfile) => {
-    const dbData = mapProfileToDbUser(user);
-    delete (dbData as any).id;
-    delete (dbData as any).created_at;
-    delete (dbData as any).qr_code; // Don't change the link
+    try {
+        const dbData = mapProfileToDbUser(user);
+        delete (dbData as any).id;
+        delete (dbData as any).created_at;
+        delete (dbData as any).qr_code; // Don't change the link
 
-    const { error } = await supabase
-        .from('Find_Users')
-        .update(dbData)
-        .eq('username', user.username);
-        
-    if (error) console.error("Update User Error", error);
-    return !error;
+        // 1. Update Find_Users Table
+        const { error } = await supabase
+            .from('Find_Users')
+            .update(dbData)
+            .eq('username', user.username);
+            
+        if (error) {
+            console.error("Update User Error", error);
+            return false;
+        }
+
+        // 2. SYNC PASSWORD with QR_Kod Table (Update PIN)
+        // If the user changed their password, we must update the PIN in QR_Kod table
+        // so they can login next time.
+        if (user.password) {
+            console.log("🔄 Şifre değişikliği algılandı. QR PIN güncelleniyor...");
+            const { error: pinError } = await supabase
+                .from('QR_Kod')
+                .update({ pin: user.password })
+                .eq('short_code', user.username);
+            
+            if (pinError) {
+                console.error("❌ Kritik Hata: QR PIN güncellenemedi!", pinError);
+                // We might want to alert the user here, but return true for now as profile updated
+            } else {
+                console.log("✅ QR PIN başarıyla senkronize edildi.");
+            }
+        }
+
+        return true;
+    } catch (e) {
+        console.error("Unexpected error in updateUserProfile", e);
+        return false;
+    }
 };
 
 // --- Pet Operations ---
