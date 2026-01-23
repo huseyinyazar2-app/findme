@@ -10,16 +10,16 @@ export { supabase };
 export const checkQRCode = async (shortCode: string) => {
     console.log(`🔍 QR Kontrol Ediliyor: ${shortCode}`);
     
-    // 1. Check if QR exists in QR_Kod table
+    // TABLO ADI: QR_Kod
+    // SÜTUNLAR: short_code, pin, status, full_url
     const { data: qrData, error: qrError } = await supabase
         .from('QR_Kod')
-        .select('*')
+        .select('short_code, pin, status') // Sadece ihtiyacımız olanları çekiyoruz
         .eq('short_code', shortCode)
         .single();
 
     if (qrError) {
         console.error("❌ QR Kontrol Hatası (Supabase):", qrError);
-        // Genellikle RLS (Row Level Security) hatası olabilir.
         return { valid: false, message: 'Veritabanı erişim hatası veya QR bulunamadı.' };
     }
 
@@ -32,7 +32,7 @@ export const checkQRCode = async (shortCode: string) => {
 
     return { 
         valid: true, 
-        status: qrData.status, // 'boş' or 'dolu'
+        status: qrData.status, // 'boş' veya 'dolu'
         shortCode: qrData.short_code,
         pin: qrData.pin 
     };
@@ -121,7 +121,7 @@ export const loginOrRegister = async (shortCode: string, inputPin: string): Prom
 
         if (qrError) {
             console.error("❌ Login Sorgu Hatası:", qrError);
-            return { success: false, error: `Veritabanı hatası: ${qrError.message} (Tablo adı veya RLS kontrolü yapın)` };
+            return { success: false, error: `Veritabanı hatası: ${qrError.message} (API Key veya Tablo adı kontrolü yapın)` };
         }
 
         if (!qrData) {
@@ -131,7 +131,8 @@ export const loginOrRegister = async (shortCode: string, inputPin: string): Prom
 
         console.log("✅ DB'den Gelen Veri:", qrData);
 
-        // Check PIN (String comparison ensures types don't mismatch)
+        // Check PIN (String comparison ensures types don't mismatch - CSV usually returns strings or numbers)
+        // CSV'de pin: 2222 veya 396049 gibi duruyor.
         if (String(qrData.pin).trim() !== String(inputPin).trim()) {
             console.warn(`⛔ Hatalı PIN. Beklenen: ${qrData.pin}, Girilen: ${inputPin}`);
             return { success: false, error: 'Hatalı PIN Kodu' };
@@ -176,7 +177,7 @@ export const loginOrRegister = async (shortCode: string, inputPin: string): Prom
 
             if (findError || !existingUser) {
                 console.error("❌ Kullanıcı profili bulunamadı hatası:", findError);
-                return { success: false, error: 'Bu QR koda bağlı kullanıcı profili bulunamadı.' };
+                return { success: false, error: 'Bu QR koda bağlı kullanıcı profili bulunamadı. Lütfen yönetici ile iletişime geçin.' };
             }
 
             return { success: true, user: mapDbUserToProfile(existingUser), isNew: false };
