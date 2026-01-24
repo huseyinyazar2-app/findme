@@ -47,9 +47,9 @@ export const FinderView: React.FC<FinderViewProps> = ({ pet, owner, onLoginClick
         const { lat, lng } = pet.lostStatus.lastSeenLocation;
         
         leafletMap.current = L.map(mapRef.current, {
-            dragging: true,        // Harita hareket ettirilebilir
-            touchZoom: true,       // Dokunarak zoom yapılabilir
-            scrollWheelZoom: false, // Sayfa kaydırmayı engellememesi için tekerlek kapalı
+            dragging: true,        
+            touchZoom: true,       
+            scrollWheelZoom: false,
             doubleClickZoom: true,
             zoomControl: true,
             attributionControl: false
@@ -59,7 +59,6 @@ export const FinderView: React.FC<FinderViewProps> = ({ pet, owner, onLoginClick
         L.marker([lat, lng]).addTo(leafletMap.current);
     }
 
-    // Cleanup
     return () => {
         if (leafletMap.current) {
             leafletMap.current.remove();
@@ -75,7 +74,6 @@ export const FinderView: React.FC<FinderViewProps> = ({ pet, owner, onLoginClick
       }
   };
 
-  // Format Date Helper
   const formatDate = (dateString?: string) => {
       if (!dateString) return '';
       return new Date(dateString).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', hour: '2-digit', minute:'2-digit' });
@@ -84,96 +82,114 @@ export const FinderView: React.FC<FinderViewProps> = ({ pet, owner, onLoginClick
   return (
     <div className="min-h-screen bg-white text-slate-900 font-sans pb-12">
       
-      {/* 1. HEADER SECTION (Acil Durum Havası) */}
+      {/* 1. HEADER SECTION */}
       <div className="w-full">
-          {/* Main Title Bar */}
-          <div className={`${isLost ? 'bg-red-700' : 'bg-emerald-600'} text-white py-5 px-4 text-center shadow-md relative z-20`}>
-              <div className="flex items-center justify-center gap-3">
-                  {isLost ? <Siren size={28} className="animate-pulse" /> : <ShieldCheck size={28} />}
-                  <h1 className="text-2xl font-black tracking-widest uppercase">
+          <div className={`${isLost ? 'bg-red-700' : 'bg-emerald-600'} text-white py-4 px-4 text-center shadow-md relative z-20`}>
+              <div className="flex items-center justify-center gap-2">
+                  {isLost ? <Siren size={24} className="animate-pulse" /> : <ShieldCheck size={24} />}
+                  <h1 className="text-xl font-black tracking-widest uppercase">
                       {isLost ? 'KAYIP İLANI' : 'GÜVENDE'}
                   </h1>
               </div>
           </div>
 
-          {/* Action Instruction Bar */}
-          <div className={`${isLost ? 'bg-red-50 text-red-900 border-b border-red-100' : 'bg-emerald-50 text-emerald-900 border-b border-emerald-100'} py-3 px-6 text-center`}>
-              <p className="text-sm font-semibold leading-relaxed">
+          <div className={`${isLost ? 'bg-red-50 text-red-900 border-b border-red-100' : 'bg-emerald-50 text-emerald-900 border-b border-emerald-100'} py-2 px-4 text-center`}>
+              <p className="text-xs font-semibold leading-relaxed">
                   {isLost 
-                    ? "Bu evcil hayvan kaybolmuştur. Lütfen aşağıdaki bilgileri inceleyerek sahibine ulaşınız."
-                    : "Merhaba, ben güvendeyim. Sadece geziyorum, endişelenmeyin."
+                    ? "Kayıp evcil hayvan. Lütfen sahibine ulaşın."
+                    : "Merhaba, ben güvendeyim. Sadece geziyorum."
                   }
               </p>
           </div>
       </div>
 
-      <div className="max-w-lg mx-auto bg-white">
+      <div className="max-w-lg mx-auto bg-white shadow-sm">
         
-        {/* 2. PHOTO SECTION (Clean & Simple) */}
-        <div className="w-full bg-slate-50 border-b border-slate-100">
-           {pet.photoUrl.value ? (
-               <div className="w-full h-[400px] relative">
-                   <img 
-                       src={pet.photoUrl.value} 
-                       alt={pet.name.value} 
-                       className="w-full h-full object-contain p-2" 
-                   />
-               </div>
-           ) : (
-               <div className="h-64 flex flex-col items-center justify-center text-slate-300">
-                   <User size={64} />
-                   <p className="text-sm font-bold mt-2">Fotoğraf Yok</p>
-               </div>
-           )}
-        </div>
-
-        {/* 3. BASIC INFO (Name & Type) */}
-        <div className="px-6 py-6 text-center border-b border-slate-100">
-            <h2 className="text-4xl font-black text-slate-900 mb-1 uppercase tracking-tight">{pet.name.value}</h2>
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-100 text-slate-600 text-sm font-bold uppercase tracking-wider">
-                {pet.type}
-            </div>
-            
-            {/* Owner Note - Highlighted */}
-            {pet.lostStatus?.message && (
-                <div className="mt-6 text-left bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-r-lg">
-                    <p className="text-xs font-bold text-yellow-700 uppercase mb-1">Sahibinden Mesaj:</p>
-                    <p className="text-slate-800 italic font-medium">"{pet.lostStatus.message}"</p>
+        {/* 2. COMPACT HERO SECTION (Image + Overlay Name) */}
+        <div className="relative w-full h-96 bg-slate-100 overflow-hidden group">
+            {pet.photoUrl.value ? (
+                <>
+                    {/* Blurred Background to fill space */}
+                    <div className="absolute inset-0">
+                        <img src={pet.photoUrl.value} className="w-full h-full object-cover blur-xl opacity-50 scale-110" alt="" />
+                    </div>
+                    {/* Main Image */}
+                    <img 
+                        src={pet.photoUrl.value} 
+                        alt={pet.name.value} 
+                        className="relative z-10 w-full h-full object-contain" 
+                    />
+                </>
+            ) : (
+                <div className="w-full h-full flex flex-col items-center justify-center text-slate-400 bg-slate-100">
+                    <User size={64} />
+                    <p className="text-sm font-bold mt-2">Fotoğraf Yok</p>
                 </div>
             )}
+
+            {/* Gradient Overlay for Text Readability */}
+            <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-black/90 via-black/40 to-transparent z-20"></div>
+
+            {/* Text Overlay */}
+            <div className="absolute bottom-4 left-4 right-4 z-30 text-white">
+                 <div className="flex items-end justify-between">
+                    <div>
+                        <h2 className="text-4xl font-black uppercase tracking-tight leading-none shadow-black drop-shadow-md mb-1">
+                            {pet.name.value}
+                        </h2>
+                        <span className="inline-block px-2 py-0.5 rounded bg-white/20 backdrop-blur-md border border-white/30 text-xs font-bold uppercase tracking-wider">
+                            {pet.type}
+                        </span>
+                    </div>
+                 </div>
+            </div>
         </div>
 
-        {/* 4. DETAILS LIST (Minimalist Grid) */}
-        <div className="px-6 py-6 border-b border-slate-100">
-            <h3 className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-                <Info size={16} /> Fiziksel Özellikler
+        {/* 3. OWNER NOTE (Immediately Below) */}
+        {pet.lostStatus?.message && (
+            <div className="bg-yellow-50 border-b border-yellow-100 p-5">
+                <div className="flex items-start gap-3">
+                    <Info className="text-yellow-600 shrink-0 mt-0.5" size={18} />
+                    <div>
+                        <p className="text-xs font-bold text-yellow-700 uppercase mb-1">Sahibinden Mesaj</p>
+                        <p className="text-slate-800 font-medium italic leading-relaxed">"{pet.lostStatus.message}"</p>
+                    </div>
+                </div>
+            </div>
+        )}
+
+        {/* 4. DETAILS LIST */}
+        <div className="px-6 py-4">
+            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3 border-b border-slate-100 pb-2">
+                Kimlik Bilgileri
             </h3>
             
-            <div className="grid grid-cols-1 gap-y-4">
+            <div className="grid grid-cols-1 gap-y-3">
                 {pet.features?.isPublic && pet.features.value && (
-                    <div className="flex justify-between items-center py-2 border-b border-slate-100 last:border-0">
-                        <span className="text-sm text-slate-500 font-medium">Renk / Özellik</span>
-                        <span className="text-sm text-slate-900 font-bold">{pet.features.value}</span>
+                    <div className="flex justify-between items-center text-sm">
+                        <span className="text-slate-500 font-medium">Renk / Özellik</span>
+                        <span className="text-slate-900 font-bold">{pet.features.value}</span>
                     </div>
                 )}
                 {pet.sizeInfo?.isPublic && pet.sizeInfo.value && (
-                    <div className="flex justify-between items-center py-2 border-b border-slate-100 last:border-0">
-                        <span className="text-sm text-slate-500 font-medium">Boy / Kilo</span>
-                        <span className="text-sm text-slate-900 font-bold">{pet.sizeInfo.value}</span>
+                    <div className="flex justify-between items-center text-sm">
+                        <span className="text-slate-500 font-medium">Boy / Kilo</span>
+                        <span className="text-slate-900 font-bold">{pet.sizeInfo.value}</span>
                     </div>
                 )}
                 {pet.temperament?.isPublic && pet.temperament.value && (
-                    <div className="flex justify-between items-center py-2 border-b border-slate-100 last:border-0">
-                        <span className="text-sm text-slate-500 font-medium">Huy Bilgisi</span>
-                        <span className="text-sm text-slate-900 font-bold">{pet.temperament.value}</span>
+                    <div className="flex justify-between items-center text-sm">
+                        <span className="text-slate-500 font-medium">Huy Bilgisi</span>
+                        <span className="text-slate-900 font-bold">{pet.temperament.value}</span>
                     </div>
                 )}
                 {pet.healthWarning?.isPublic && pet.healthWarning.value && (
-                    <div className="flex justify-between items-start py-3 bg-red-50 px-3 rounded-lg mt-2">
-                        <span className="text-sm text-red-600 font-bold flex items-center gap-1">
-                            <AlertTriangle size={16} /> Sağlık Uyarısı
-                        </span>
-                        <span className="text-sm text-red-800 font-bold text-right max-w-[60%]">{pet.healthWarning.value}</span>
+                    <div className="mt-2 p-3 bg-red-50 rounded-lg border border-red-100 flex items-start gap-2">
+                        <AlertTriangle size={16} className="text-red-600 shrink-0 mt-0.5" />
+                        <div>
+                            <span className="block text-xs font-bold text-red-600 uppercase mb-0.5">Sağlık Uyarısı</span>
+                            <span className="block text-sm font-bold text-red-900 leading-tight">{pet.healthWarning.value}</span>
+                        </div>
                     </div>
                 )}
             </div>
@@ -181,7 +197,7 @@ export const FinderView: React.FC<FinderViewProps> = ({ pet, owner, onLoginClick
 
         {/* 5. INTERACTIVE MAP */}
         {pet.lostStatus?.lastSeenLocation && (
-            <div className="w-full h-80 relative z-10 border-t border-b border-slate-200">
+            <div className="w-full h-72 relative z-10 border-t border-b border-slate-200 mt-2">
                 <div ref={mapRef} className="w-full h-full z-0" />
                 
                 {/* Floating Map Button */}
@@ -191,20 +207,22 @@ export const FinderView: React.FC<FinderViewProps> = ({ pet, owner, onLoginClick
                         className="w-full bg-slate-900/90 backdrop-blur text-white py-3 px-4 rounded-xl shadow-lg font-bold text-sm flex items-center justify-center gap-2 hover:bg-slate-800 transition-colors"
                     >
                         <Navigation size={18} />
-                        Google Haritalar'da Aç
+                        Yol Tarifi Al
                     </button>
                 </div>
                 
-                <div className="absolute top-4 left-4 z-[400] bg-white/90 px-3 py-1 rounded-md shadow-sm border border-slate-200">
-                     <p className="text-xs font-bold text-slate-600">Son Görülen Konum</p>
-                     <p className="text-[10px] text-slate-400">{formatDate(pet.lostStatus.lostDate)}</p>
+                <div className="absolute top-4 left-4 z-[400] bg-white/90 px-3 py-1.5 rounded-lg shadow-sm border border-slate-200">
+                     <p className="text-xs font-bold text-slate-800 flex items-center gap-1">
+                        <MapPin size={12} className="text-red-500" /> Son Konum
+                     </p>
+                     <p className="text-[10px] text-slate-500 mt-0.5">{formatDate(pet.lostStatus.lostDate)}</p>
                 </div>
             </div>
         )}
 
-        {/* 6. CONTACT ACTIONS (Fixed Bottom or Inline) */}
-        <div className="p-6 space-y-4 bg-slate-50">
-            <h3 className="text-center text-sm font-bold text-slate-400 uppercase tracking-widest mb-2">İletişim Bilgileri</h3>
+        {/* 6. CONTACT ACTIONS */}
+        <div className="p-6 space-y-3 bg-slate-50">
+            <h3 className="text-center text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">İletişim</h3>
             
             {owner?.phone && showPhone && (
                 <a href={`tel:${owner.phone.replace(/\s/g, '')}`} className="flex items-center justify-center gap-3 w-full bg-red-600 text-white py-4 rounded-xl font-bold text-lg shadow-lg hover:bg-red-700 active:scale-95 transition-all">
@@ -214,7 +232,7 @@ export const FinderView: React.FC<FinderViewProps> = ({ pet, owner, onLoginClick
             )}
             
             {(!showPhone || showEmail) && owner?.email && (
-                 <a href={`mailto:${owner.email}`} className="flex items-center justify-center gap-3 w-full bg-white text-slate-800 border-2 border-slate-200 py-4 rounded-xl font-bold text-lg hover:bg-slate-50 active:scale-95 transition-all">
+                 <a href={`mailto:${owner.email}`} className="flex items-center justify-center gap-3 w-full bg-white text-slate-800 border-2 border-slate-200 py-4 rounded-xl font-bold text-lg hover:bg-slate-100 active:scale-95 transition-all">
                     <Mail size={22} className="text-slate-500" />
                     E-posta Gönder
                 </a>
@@ -227,19 +245,19 @@ export const FinderView: React.FC<FinderViewProps> = ({ pet, owner, onLoginClick
                         <Users size={16} />
                         <span className="text-xs font-bold uppercase">Acil Durum Kişisi (Yedek)</span>
                     </div>
-                    <div className="bg-white p-4 rounded-xl border border-slate-200 flex justify-between items-center">
+                    <div className="bg-white p-3 rounded-xl border border-slate-200 flex justify-between items-center shadow-sm">
                         <div>
-                            <p className="font-bold text-slate-900">{owner.emergencyContactName}</p>
-                            <p className="text-xs text-slate-400">2. Şahıs</p>
+                            <p className="font-bold text-slate-900 text-sm">{owner.emergencyContactName}</p>
+                            <p className="text-[10px] text-slate-400">2. Şahıs</p>
                         </div>
                         <div className="flex gap-2">
                              {owner.emergencyContactPhone && (
-                                <a href={`tel:${owner.emergencyContactPhone}`} className="p-2 bg-slate-100 rounded-lg text-slate-600 hover:bg-slate-200">
+                                <a href={`tel:${owner.emergencyContactPhone}`} className="p-2 bg-slate-100 rounded-lg text-slate-600 hover:bg-green-100 hover:text-green-600 transition-colors">
                                     <Phone size={18} />
                                 </a>
                              )}
                              {owner.emergencyContactEmail && (
-                                <a href={`mailto:${owner.emergencyContactEmail}`} className="p-2 bg-slate-100 rounded-lg text-slate-600 hover:bg-slate-200">
+                                <a href={`mailto:${owner.emergencyContactEmail}`} className="p-2 bg-slate-100 rounded-lg text-slate-600 hover:bg-blue-100 hover:text-blue-600 transition-colors">
                                     <Mail size={18} />
                                 </a>
                              )}
@@ -250,8 +268,8 @@ export const FinderView: React.FC<FinderViewProps> = ({ pet, owner, onLoginClick
         </div>
 
         {/* Footer */}
-        <div className="bg-slate-50 pb-8 text-center">
-            <button onClick={onLoginClick} className="text-xs text-slate-400 font-bold underline uppercase">
+        <div className="bg-slate-50 pb-8 text-center border-t border-slate-200/50 pt-4">
+            <button onClick={onLoginClick} className="text-xs text-slate-400 font-bold underline uppercase hover:text-slate-600">
                 Yönetici Girişi
             </button>
         </div>
