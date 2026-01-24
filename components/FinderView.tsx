@@ -80,63 +80,89 @@ export const FinderView: React.FC<FinderViewProps> = ({ pet, owner, onLoginClick
       
       {/* 1. ALERT HEADER */}
       <div className={`
-          p-6 pt-10 text-center rounded-b-[2.5rem] shadow-xl relative z-10 overflow-hidden
-          ${isLost ? 'bg-red-600 text-white' : 'bg-green-600 text-white'}
+          p-6 pt-10 text-center rounded-b-[3rem] shadow-xl relative z-10 overflow-hidden
+          ${isLost ? 'bg-gradient-to-b from-red-600 to-red-700 text-white' : 'bg-gradient-to-b from-green-600 to-green-700 text-white'}
       `}>
          {/* Background Pattern */}
-         <div className="absolute top-0 left-0 w-full h-full opacity-10 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-white via-transparent to-transparent"></div>
+         <div className="absolute top-0 left-0 w-full h-full opacity-20 bg-[radial-gradient(circle_at_top,_var(--tw-gradient-stops))] from-white via-transparent to-transparent"></div>
          
          <div className="relative z-10 flex flex-col items-center">
-            <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm animate-pulse mb-3 shadow-lg">
-                {isLost ? <Siren size={32} className="text-white" /> : <Heart size={32} className="text-white" />}
+            <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-md animate-pulse mb-3 shadow-lg border-2 border-white/30">
+                {isLost ? <Siren size={32} className="text-white drop-shadow-md" /> : <Heart size={32} className="text-white drop-shadow-md" />}
             </div>
-            <h1 className="text-3xl font-black uppercase tracking-widest leading-none mb-2">
+            <h1 className="text-3xl font-black uppercase tracking-widest leading-none mb-2 drop-shadow-md">
                 {isLost ? 'Kayıp İlanı' : 'Güvendeyim'}
             </h1>
-            <p className={`text-sm font-medium px-4 py-1 rounded-full ${isLost ? 'bg-red-700 text-red-100' : 'bg-green-700 text-green-100'}`}>
+            <p className={`text-xs font-bold px-4 py-1.5 rounded-full uppercase tracking-wide shadow-sm ${isLost ? 'bg-white/20 text-white' : 'bg-white/20 text-white'}`}>
                 {isLost ? 'Sahibine Ulaşılmalı!' : 'Merhaba, sadece geziyorum.'}
             </p>
          </div>
       </div>
 
-      <div className="px-4 -mt-8 relative z-20 max-w-lg mx-auto space-y-6">
+      <div className="px-4 -mt-10 relative z-20 max-w-lg mx-auto space-y-6">
         
-        {/* 2. PET PHOTO & IDENTITY CARD */}
-        <div className="bg-white dark:bg-slate-800 rounded-3xl p-3 shadow-xl border border-slate-100 dark:border-slate-700">
+        {/* 2. PET PHOTO & IDENTITY CARD (REDESIGNED) */}
+        <div className="bg-white dark:bg-slate-800 rounded-[2rem] shadow-2xl overflow-hidden border-4 border-white dark:border-slate-700">
+           
+           {/* IMAGE CONTAINER */}
            {pet.photoUrl.value ? (
-               <div className="aspect-square w-full rounded-2xl overflow-hidden bg-slate-100 relative shadow-inner">
-                   <img src={pet.photoUrl.value} alt={pet.name.value} className="w-full h-full object-cover transform hover:scale-105 transition-transform duration-500" />
-                   {/* Name Overlay */}
-                   <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-4 pt-12">
-                        <h2 className="text-3xl font-bold text-white leading-none">{pet.name.value}</h2>
-                        <p className="text-slate-200 text-sm font-medium mt-1">{pet.type}</p>
+               <div className="relative w-full h-[450px] bg-slate-100 dark:bg-slate-900 overflow-hidden group">
+                   
+                   {/* 1. Blurred Background Layer (Aesthetic Fill) */}
+                   <div className="absolute inset-0">
+                        <img 
+                            src={pet.photoUrl.value} 
+                            alt="Background Blur"
+                            className="w-full h-full object-cover blur-2xl opacity-60 scale-110 brightness-90 dark:brightness-75"
+                        />
+                   </div>
+
+                   {/* 2. Main Image (Fully Visible) */}
+                   <div className="relative z-10 w-full h-full flex items-center justify-center p-4">
+                        <img 
+                            src={pet.photoUrl.value} 
+                            alt={pet.name.value} 
+                            className="max-w-full max-h-full object-contain rounded-xl shadow-lg drop-shadow-2xl" 
+                        />
                    </div>
                </div>
            ) : (
-               <div className="aspect-square w-full rounded-2xl bg-slate-200 dark:bg-slate-700 flex flex-col items-center justify-center text-slate-400">
+               <div className="h-64 w-full bg-slate-200 dark:bg-slate-700 flex flex-col items-center justify-center text-slate-400">
                    <User size={64} />
-                   <p>Fotoğraf Yok</p>
+                   <p className="font-medium mt-2">Fotoğraf Yok</p>
                </div>
            )}
+
+           {/* INFO CONTAINER (Clean Text Area) */}
+           <div className="px-6 py-6 bg-white dark:bg-slate-800 text-center relative z-20 -mt-2 rounded-t-3xl">
+                <h2 className="text-4xl font-black text-slate-900 dark:text-white leading-tight mb-1">
+                    {pet.name.value}
+                </h2>
+                <div className="flex justify-center gap-2 mt-2">
+                    <span className="px-4 py-1.5 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 text-sm font-bold uppercase tracking-wide border border-slate-200 dark:border-slate-600">
+                        {pet.type}
+                    </span>
+                </div>
+           </div>
         </div>
 
         {/* 3. OWNER MESSAGE */}
         {pet.lostStatus?.message && (
-            <div className="bg-yellow-50 dark:bg-yellow-900/10 border-l-4 border-yellow-400 dark:border-yellow-600 p-5 rounded-r-xl shadow-sm">
+            <div className="bg-yellow-50 dark:bg-yellow-900/10 border-l-4 border-yellow-400 dark:border-yellow-600 p-5 rounded-r-2xl shadow-sm">
                 <div className="flex items-center gap-2 mb-2">
-                    <Info size={16} className="text-yellow-600 dark:text-yellow-400" />
+                    <Info size={18} className="text-yellow-600 dark:text-yellow-400" />
                     <span className="text-xs font-bold uppercase tracking-wider text-yellow-700 dark:text-yellow-300">Sahibinden Not</span>
                 </div>
-                <p className="text-slate-700 dark:text-slate-300 italic text-sm leading-relaxed">
+                <p className="text-slate-800 dark:text-slate-200 italic font-medium text-base leading-relaxed">
                     "{pet.lostStatus.message}"
                 </p>
             </div>
         )}
 
         {/* 4. PUBLIC INFORMATION GRID */}
-        <div className="bg-white dark:bg-slate-800 rounded-2xl p-5 border border-slate-200 dark:border-slate-700 shadow-sm">
-             <h3 className="text-slate-900 dark:text-white font-bold mb-4 flex items-center gap-2">
-                 <ShieldCheck className="text-matrix-500" size={20} />
+        <div className="bg-white dark:bg-slate-800 rounded-[2rem] p-6 border border-slate-200 dark:border-slate-700 shadow-lg">
+             <h3 className="text-slate-900 dark:text-white font-bold mb-5 flex items-center gap-2 text-lg">
+                 <ShieldCheck className="text-matrix-600 dark:text-matrix-400" size={24} />
                  Kimlik Bilgileri
              </h3>
              
@@ -144,52 +170,52 @@ export const FinderView: React.FC<FinderViewProps> = ({ pet, owner, onLoginClick
                  {/* Feature Row 1 */}
                  <div className="grid grid-cols-2 gap-3">
                     {pet.features?.isPublic && pet.features.value && (
-                        <div className="bg-slate-50 dark:bg-slate-700/50 p-3 rounded-xl">
+                        <div className="bg-slate-50 dark:bg-slate-700/50 p-4 rounded-2xl text-center border border-slate-100 dark:border-slate-700">
                             <span className="text-[10px] uppercase font-bold text-slate-400 block mb-1">Renk / Özellik</span>
-                            <span className="text-sm font-semibold text-slate-800 dark:text-slate-200 leading-tight block">{pet.features.value}</span>
+                            <span className="text-sm font-bold text-slate-800 dark:text-slate-200 leading-tight block">{pet.features.value}</span>
                         </div>
                     )}
                     {pet.sizeInfo?.isPublic && pet.sizeInfo.value && (
-                        <div className="bg-slate-50 dark:bg-slate-700/50 p-3 rounded-xl">
+                        <div className="bg-slate-50 dark:bg-slate-700/50 p-4 rounded-2xl text-center border border-slate-100 dark:border-slate-700">
                             <span className="text-[10px] uppercase font-bold text-slate-400 block mb-1">Boy / Kilo</span>
-                            <span className="text-sm font-semibold text-slate-800 dark:text-slate-200 leading-tight block">{pet.sizeInfo.value}</span>
+                            <span className="text-sm font-bold text-slate-800 dark:text-slate-200 leading-tight block">{pet.sizeInfo.value}</span>
                         </div>
                     )}
                  </div>
 
                  {/* Feature Row 2 */}
                  {pet.temperament?.isPublic && pet.temperament.value && (
-                     <div className="bg-slate-50 dark:bg-slate-700/50 p-3 rounded-xl flex items-center gap-3">
-                         <div className="bg-blue-100 dark:bg-blue-900/30 p-2 rounded-full text-blue-600 dark:text-blue-400">
-                             <Info size={16} />
+                     <div className="bg-blue-50 dark:bg-slate-700/50 p-4 rounded-2xl flex items-center gap-4 border border-blue-100 dark:border-slate-700">
+                         <div className="bg-blue-100 dark:bg-blue-900/40 p-3 rounded-full text-blue-600 dark:text-blue-400">
+                             <Info size={20} />
                          </div>
                          <div>
                             <span className="text-[10px] uppercase font-bold text-slate-400 block">Huy Bilgisi</span>
-                            <span className="text-sm font-semibold text-slate-800 dark:text-slate-200">{pet.temperament.value}</span>
+                            <span className="text-sm font-bold text-slate-800 dark:text-slate-200">{pet.temperament.value}</span>
                          </div>
                      </div>
                  )}
 
                  {/* Health Warning (Emphasis) */}
                  {pet.healthWarning?.isPublic && pet.healthWarning.value && (
-                     <div className="bg-red-50 dark:bg-red-900/10 p-4 rounded-xl border border-red-100 dark:border-red-900/30 flex items-start gap-3">
-                         <AlertTriangle className="text-red-500 shrink-0 mt-0.5" size={20} />
+                     <div className="bg-red-50 dark:bg-red-900/20 p-5 rounded-2xl border border-red-100 dark:border-red-900/30 flex items-start gap-4 shadow-sm">
+                         <AlertTriangle className="text-red-500 shrink-0 mt-0.5" size={24} />
                          <div>
                              <span className="text-xs font-bold text-red-400 block mb-1 uppercase">Sağlık Uyarısı!</span>
-                             <span className="text-sm font-bold text-red-700 dark:text-red-300">{pet.healthWarning.value}</span>
+                             <span className="text-base font-bold text-red-700 dark:text-red-300 leading-tight">{pet.healthWarning.value}</span>
                          </div>
                      </div>
                  )}
 
                  {/* Vet Info */}
                  {pet.vetInfo?.isPublic && pet.vetInfo.value && (
-                     <div className="bg-green-50 dark:bg-green-900/10 p-3 rounded-xl border border-green-100 dark:border-green-900/30 flex justify-between items-center">
+                     <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-2xl border border-green-100 dark:border-green-900/30 flex justify-between items-center">
                          <div>
                             <span className="text-[10px] uppercase font-bold text-green-600/70 dark:text-green-400/70 block">Veteriner</span>
-                            <span className="text-sm font-semibold text-green-800 dark:text-green-200">{pet.vetInfo.value}</span>
+                            <span className="text-sm font-bold text-green-800 dark:text-green-200">{pet.vetInfo.value}</span>
                          </div>
-                         <div className="bg-white/50 dark:bg-black/20 p-2 rounded-full">
-                             <ShieldCheck size={18} className="text-green-600 dark:text-green-400" />
+                         <div className="bg-white/60 dark:bg-black/20 p-2 rounded-full">
+                             <ShieldCheck size={20} className="text-green-600 dark:text-green-400" />
                          </div>
                      </div>
                  )}
@@ -198,22 +224,22 @@ export const FinderView: React.FC<FinderViewProps> = ({ pet, owner, onLoginClick
 
         {/* 5. LOCATION MAP (If Available) */}
         {pet.lostStatus?.lastSeenLocation && (
-            <div className="bg-white dark:bg-slate-800 rounded-2xl p-1 shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
-                <div className="relative h-48 w-full rounded-xl overflow-hidden bg-slate-100">
+            <div className="bg-white dark:bg-slate-800 rounded-[2rem] p-1.5 shadow-lg border border-slate-200 dark:border-slate-700 overflow-hidden">
+                <div className="relative h-56 w-full rounded-[1.5rem] overflow-hidden bg-slate-100">
                      <div ref={mapRef} className="w-full h-full z-0" />
                      {/* Overlay Button */}
                      <button 
                         onClick={openMaps}
-                        className="absolute bottom-3 right-3 z-10 bg-white dark:bg-slate-900 text-slate-800 dark:text-white px-4 py-2 rounded-full shadow-lg text-xs font-bold flex items-center gap-2 hover:scale-105 transition-transform"
+                        className="absolute bottom-4 right-4 z-10 bg-blue-600 text-white px-5 py-2.5 rounded-full shadow-xl text-xs font-bold flex items-center gap-2 hover:scale-105 transition-transform active:scale-95"
                      >
-                        <Navigation size={14} className="text-blue-500" />
+                        <Navigation size={14} className="text-white" />
                         Yol Tarifi Al
                      </button>
                      {/* Label */}
-                     <div className="absolute top-3 left-3 z-10 bg-white/90 dark:bg-slate-900/90 backdrop-blur-sm px-3 py-1.5 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700">
+                     <div className="absolute top-4 left-4 z-10 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm px-3 py-1.5 rounded-xl shadow-md border border-slate-200 dark:border-slate-700">
                          <div className="flex items-center gap-1.5">
-                             <MapPin size={12} className="text-red-500" />
-                             <span className="text-xs font-bold text-slate-700 dark:text-slate-200">Son Görülen Konum</span>
+                             <MapPin size={14} className="text-red-500" />
+                             <span className="text-xs font-bold text-slate-800 dark:text-slate-200">Son Görülen Konum</span>
                          </div>
                      </div>
                 </div>
@@ -221,18 +247,23 @@ export const FinderView: React.FC<FinderViewProps> = ({ pet, owner, onLoginClick
         )}
 
         {/* 6. PRIMARY CONTACT ACTIONS */}
-        <div className="space-y-3 pt-2">
-            <p className="text-center text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">İletişim Seçenekleri</p>
+        <div className="space-y-4 pt-4">
+            <div className="flex items-center gap-4">
+                <div className="h-px bg-slate-300 dark:bg-slate-700 flex-1"></div>
+                <p className="text-center text-xs font-black text-slate-400 uppercase tracking-[0.2em]">İletişim</p>
+                <div className="h-px bg-slate-300 dark:bg-slate-700 flex-1"></div>
+            </div>
             
             {owner?.phone && showPhone && (
-                <a href={`tel:${owner.phone.replace(/\s/g, '')}`} className="flex items-center justify-center gap-3 w-full bg-slate-900 dark:bg-white text-white dark:text-slate-900 py-4 rounded-2xl font-bold shadow-lg shadow-slate-900/20 transition-all active:scale-95 group">
-                    <Phone size={24} className="text-green-400 dark:text-green-600 group-hover:animate-pulse" />
-                    <span>Sahibini Ara</span>
+                <a href={`tel:${owner.phone.replace(/\s/g, '')}`} className="flex items-center justify-center gap-3 w-full bg-slate-900 dark:bg-white text-white dark:text-slate-900 py-4 rounded-2xl font-black text-lg shadow-xl shadow-slate-900/20 dark:shadow-white/5 transition-all active:scale-95 group relative overflow-hidden">
+                    <div className="absolute inset-0 bg-white/10 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
+                    <Phone size={24} className="text-green-400 dark:text-green-600 group-hover:animate-pulse relative z-10" />
+                    <span className="relative z-10">Sahibini Ara</span>
                 </a>
             )}
             
             {(!showPhone || showEmail) && owner?.email && (
-                 <a href={`mailto:${owner.email}`} className="flex items-center justify-center gap-3 w-full bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-white border border-slate-200 dark:border-slate-600 py-4 rounded-2xl font-bold shadow-sm transition-all active:scale-95 hover:bg-slate-200 dark:hover:bg-slate-600">
+                 <a href={`mailto:${owner.email}`} className="flex items-center justify-center gap-3 w-full bg-slate-100 dark:bg-slate-700 text-slate-800 dark:text-white border-2 border-slate-200 dark:border-slate-600 py-4 rounded-2xl font-bold text-lg shadow-sm transition-all active:scale-95 hover:bg-slate-200 dark:hover:bg-slate-600">
                     <Mail size={22} className="text-slate-500 dark:text-slate-400" />
                     <span>E-posta Gönder</span>
                 </a>
@@ -241,28 +272,30 @@ export const FinderView: React.FC<FinderViewProps> = ({ pet, owner, onLoginClick
 
         {/* 7. EMERGENCY CONTACT (If Available) */}
         {owner?.emergencyContactName && (owner.emergencyContactPhone || owner.emergencyContactEmail) && (
-            <div className="mt-6 border-t border-slate-200 dark:border-slate-700 pt-6">
-                <div className="bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-4 border border-slate-200 dark:border-slate-700">
-                    <div className="flex items-center gap-2 mb-3">
-                        <Users size={18} className="text-orange-500" />
-                        <h4 className="font-bold text-sm text-slate-700 dark:text-slate-300">Acil Durum Kişisi (2. Şahıs)</h4>
+            <div className="mt-8 border-t border-slate-200 dark:border-slate-800 pt-8 pb-4">
+                <div className="bg-orange-50 dark:bg-orange-900/10 rounded-2xl p-5 border border-orange-100 dark:border-orange-900/30">
+                    <div className="flex items-center gap-2 mb-4">
+                        <div className="p-2 bg-orange-100 dark:bg-orange-900/30 rounded-full text-orange-600 dark:text-orange-400">
+                             <Users size={18} />
+                        </div>
+                        <h4 className="font-bold text-sm text-slate-800 dark:text-slate-200 uppercase tracking-wide">Acil Durum Kişisi (2. Şahıs)</h4>
                     </div>
                     
                     <div className="flex items-center justify-between">
                         <div>
-                            <p className="font-semibold text-slate-800 dark:text-white text-sm">{owner.emergencyContactName}</p>
-                            <p className="text-xs text-slate-500">Alternatif İletişim</p>
+                            <p className="font-bold text-slate-900 dark:text-white text-lg">{owner.emergencyContactName}</p>
+                            <p className="text-xs text-slate-500 font-medium">Sahibine ulaşılamazsa aranabilir.</p>
                         </div>
                         
-                        <div className="flex gap-2">
+                        <div className="flex gap-3">
                             {owner.emergencyContactPhone && (
-                                <a href={`tel:${owner.emergencyContactPhone.replace(/\s/g, '')}`} className="w-10 h-10 bg-white dark:bg-slate-700 rounded-full flex items-center justify-center shadow-sm border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-white hover:bg-green-50 dark:hover:bg-green-900/20 hover:text-green-600 transition-colors">
-                                    <Phone size={18} />
+                                <a href={`tel:${owner.emergencyContactPhone.replace(/\s/g, '')}`} className="w-12 h-12 bg-white dark:bg-slate-800 rounded-full flex items-center justify-center shadow-md border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-white hover:bg-green-500 hover:text-white dark:hover:bg-green-600 hover:border-green-500 transition-all">
+                                    <Phone size={20} />
                                 </a>
                             )}
                             {owner.emergencyContactEmail && (
-                                <a href={`mailto:${owner.emergencyContactEmail}`} className="w-10 h-10 bg-white dark:bg-slate-700 rounded-full flex items-center justify-center shadow-sm border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-white hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-600 transition-colors">
-                                    <Mail size={18} />
+                                <a href={`mailto:${owner.emergencyContactEmail}`} className="w-12 h-12 bg-white dark:bg-slate-800 rounded-full flex items-center justify-center shadow-md border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-white hover:bg-blue-500 hover:text-white dark:hover:bg-blue-600 hover:border-blue-500 transition-all">
+                                    <Mail size={20} />
                                 </a>
                             )}
                         </div>
@@ -272,9 +305,9 @@ export const FinderView: React.FC<FinderViewProps> = ({ pet, owner, onLoginClick
         )}
 
         {/* FOOTER */}
-        <div className="mt-12 text-center pb-8">
-            <button onClick={onLoginClick} className="text-xs text-slate-400 dark:text-slate-600 font-medium underline hover:text-slate-600 dark:hover:text-slate-400 transition-colors">
-                Sahibi misiniz? Yönetici Girişi
+        <div className="mt-8 text-center pb-8">
+            <button onClick={onLoginClick} className="text-xs text-slate-400 dark:text-slate-600 font-bold underline hover:text-slate-600 dark:hover:text-slate-400 transition-colors uppercase tracking-wider">
+                Yönetici Girişi
             </button>
         </div>
       </div>

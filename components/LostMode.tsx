@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { PetProfile, LostStatus, UserProfile } from '../types';
-import { Siren, MapPin, Save, Info, Lock, Unlock, Hand, ShieldCheck, KeyRound, CheckCircle2, Navigation } from 'lucide-react';
+import { Siren, MapPin, Save, Info, Lock, Unlock, Hand, ShieldCheck, KeyRound, CheckCircle2, Navigation, AlertTriangle, Radar } from 'lucide-react';
 import { Input } from './ui/Input';
 import L from 'leaflet';
 
@@ -239,15 +239,8 @@ export const LostMode: React.FC<LostModeProps> = ({ user, pet, onSavePet, setHas
         // Update Prop
         onSavePet(updatedPet);
 
-        // --- CRITICAL FIX ---
-        // Reset local state to match the "Safe" (empty) state we just saved.
-        // This prevents the "dirty check" (useEffect) from thinking we still have unsaved changes
-        // because "location" or "message" still held the old values in memory.
         setMessage('');
         setLocation(undefined);
-        // setIsActive is already false here.
-
-        // Explicitly clear dirty state logic
         setHasUnsavedChanges(false);
         setLocalHasChanges(false);
 
@@ -256,168 +249,202 @@ export const LostMode: React.FC<LostModeProps> = ({ user, pet, onSavePet, setHas
   };
 
   return (
-    <div className="pb-24 pt-6 px-4 max-w-lg mx-auto animate-in fade-in relative">
-      <div className="flex items-center gap-2 mb-6">
-        <Siren className={isActive ? "text-red-500 animate-pulse" : "text-matrix-600 dark:text-matrix-500"} size={28} />
-        <h2 className="text-2xl font-bold text-slate-900 dark:text-white tracking-wide">
-            Kayıp Bildirimi
-        </h2>
-      </div>
+    <div className="pb-32 bg-slate-50 dark:bg-slate-950 min-h-screen">
+      
+      {/* 1. DYNAMIC HEADER */}
+      <div className={`
+          relative w-full pb-10 pt-8 px-6 rounded-b-[2.5rem] shadow-xl overflow-hidden transition-all duration-500
+          ${isActive 
+            ? 'bg-gradient-to-br from-red-600 via-red-700 to-rose-800' 
+            : 'bg-gradient-to-br from-emerald-500 via-teal-600 to-emerald-700'}
+      `}>
+          {/* Background Decorations */}
+          <div className="absolute top-0 right-0 w-64 h-64 bg-white opacity-5 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl"></div>
+          <div className="absolute bottom-0 left-0 w-48 h-48 bg-black opacity-10 rounded-full translate-y-1/2 -translate-x-1/2 blur-2xl"></div>
 
-      {/* --- CONTROL PANEL (SWITCH UI) --- */}
-      <div className="bg-white dark:bg-dark-surface rounded-2xl border border-slate-200 dark:border-gray-800 shadow-sm p-4 mb-6 flex items-center justify-between">
-          <div className="flex flex-col">
-              <span className="font-bold text-slate-800 dark:text-white text-lg">
-                  Acil Durum Modu
-              </span>
-              <span className={`text-xs font-medium ${isActive ? 'text-red-500' : 'text-green-600 dark:text-green-400'}`}>
-                  {isActive ? 'Şu an: KAYIP' : 'Şu an: GÜVENDE'}
-              </span>
-          </div>
-
-          <div 
-            onClick={() => toggleStatus(!isActive)}
-            className={`
-                w-16 h-9 rounded-full p-1 cursor-pointer transition-colors duration-300 relative
-                ${isActive ? 'bg-red-500' : 'bg-green-500'}
-            `}
-          >
+          <div className="relative z-10 flex flex-col items-center text-center space-y-4">
               <div className={`
-                  w-7 h-7 bg-white rounded-full shadow-md transform transition-transform duration-300 flex items-center justify-center
-                  ${isActive ? 'translate-x-7' : 'translate-x-0'}
+                  w-20 h-20 rounded-full flex items-center justify-center shadow-lg border-4 border-white/20 backdrop-blur-md
+                  ${isActive ? 'bg-red-500 animate-pulse' : 'bg-emerald-500'}
               `}>
-                 {isActive ? <Siren size={14} className="text-red-500" /> : <CheckCircle2 size={14} className="text-green-600" />}
+                  {isActive ? <Siren size={40} className="text-white" /> : <ShieldCheck size={40} className="text-white" />}
               </div>
-          </div>
-      </div>
-
-      {/* --- ACTIVE (LOST) FORM AREA --- */}
-      {isActive && (
-          <div className="space-y-6 animate-in slide-in-from-bottom-4 fade-in duration-500">
-              <div className="bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/30 p-4 rounded-xl flex gap-3 items-start">
-                  <Info className="text-red-500 shrink-0 mt-0.5" size={20} />
-                  <p className="text-sm text-red-800 dark:text-red-200">
-                      Aşağıdaki bilgileri doldurup <strong>Bildirimi Güncelle</strong> butonuna basarak kayıp ilanını yayınlayın.
+              
+              <div>
+                  <h2 className="text-3xl font-black text-white tracking-tight uppercase">
+                      {isActive ? 'Kayıp Modu Aktif!' : 'Durum: Güvende'}
+                  </h2>
+                  <p className="text-white/80 text-sm font-medium mt-1 max-w-xs mx-auto">
+                      {isActive 
+                          ? 'Acil durum sinyali yayılıyor. Konum ve mesajınız herkese açık.' 
+                          : 'Dostumuz yanınızda ve güvende. Herhangi bir tehlike yok.'}
                   </p>
               </div>
 
-              {/* Map Section */}
-              <div className="bg-white dark:bg-dark-surface/50 p-4 rounded-2xl border border-red-200 dark:border-red-500/30 shadow-sm">
-                  <div className="flex justify-between items-center mb-3">
-                      <label className="flex items-center gap-2 text-sm font-bold text-slate-700 dark:text-gray-200">
-                          <MapPin className="text-red-500" size={18} />
-                          Son Görülen Konum
-                      </label>
-                      <button 
-                        onClick={getUserLocation}
-                        className="text-xs flex items-center gap-1 bg-matrix-100 text-matrix-700 px-2 py-1 rounded-lg hover:bg-matrix-200 dark:bg-matrix-900 dark:text-matrix-300 transition-colors"
-                      >
-                          <Navigation size={12} /> Konumu Bul
-                      </button>
-                  </div>
-                  
-                  <div className="relative w-full h-72 rounded-xl overflow-hidden border border-slate-200 dark:border-gray-700 bg-slate-100 dark:bg-slate-800 touch-none">
-                      <div id="map" ref={mapRef} className="w-full h-full z-10" />
-                      {!isMapInteractive && (
-                          <div className="absolute inset-0 z-[50] bg-black/10 dark:bg-black/40 backdrop-blur-[1px] flex flex-col items-center justify-center transition-opacity">
-                              <button 
-                                onClick={() => setIsMapInteractive(true)}
-                                className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white px-4 py-2 rounded-full font-bold text-sm shadow-lg flex items-center gap-2 hover:scale-105 transition-transform"
-                              >
-                                  <Hand size={16} /> Haritayı Yönet
-                              </button>
-                              <span className="text-[10px] text-white bg-black/50 px-2 py-1 rounded mt-2">
-                                  Sayfayı kaydırmak için kilitli
-                              </span>
-                          </div>
-                      )}
-                      {isMapInteractive && (
-                          <button 
-                            onClick={() => setIsMapInteractive(false)}
-                            className="absolute top-2 right-2 z-[50] bg-white/90 dark:bg-slate-800/90 p-2 rounded-lg shadow-md text-slate-700 dark:text-gray-200 hover:bg-slate-100"
-                            title="Kaydırmayı Bitir"
-                          >
-                              <Lock size={16} />
-                          </button>
-                      )}
-                  </div>
+              {/* TOGGLE SWITCH (Large Interaction Area) */}
+              <div className="mt-4">
+                  <button
+                      onClick={() => toggleStatus(!isActive)}
+                      className={`
+                          group relative flex items-center px-1 py-1 w-64 h-16 rounded-full shadow-inner transition-colors duration-300
+                          ${isActive ? 'bg-red-900/40 border border-red-400/30' : 'bg-emerald-900/30 border border-emerald-400/30'}
+                      `}
+                  >
+                      <span className={`absolute left-0 w-full text-center text-xs font-bold tracking-widest uppercase transition-opacity duration-300 ${isActive ? 'opacity-0' : 'text-white/70 opacity-100'}`}>
+                          Kaydır -> Aktif Et
+                      </span>
+                       <span className={`absolute left-0 w-full text-center text-xs font-bold tracking-widest uppercase transition-opacity duration-300 ${isActive ? 'text-white/70 opacity-100' : 'opacity-0'}`}>
+                          Kapatmak İçin <-
+                      </span>
 
-                  {location && (
-                      <div className="flex justify-between items-center mt-2">
-                         <p className="text-[10px] text-slate-400 font-mono">
-                             {location.lat.toFixed(6)}, {location.lng.toFixed(6)}
-                         </p>
-                         <div className="flex items-center gap-1 text-[10px] text-orange-500">
-                             <Unlock size={10} />
-                             <span>Harita {isMapInteractive ? 'Açık' : 'Kilitli'}</span>
-                         </div>
+                      <div className={`
+                          w-14 h-14 bg-white rounded-full shadow-lg transform transition-all duration-300 flex items-center justify-center
+                          ${isActive ? 'translate-x-[12.2rem]' : 'translate-x-0'}
+                      `}>
+                          {isActive 
+                            ? <Siren size={20} className="text-red-600" /> 
+                            : <CheckCircle2 size={24} className="text-emerald-600" />}
                       </div>
-                  )}
-              </div>
-
-              {/* Note Section */}
-              <div className="bg-white dark:bg-dark-surface/50 p-4 rounded-2xl border border-red-200 dark:border-red-500/30 shadow-sm">
-                  <label className="block text-sm font-bold text-slate-700 dark:text-gray-200 mb-2">
-                      Bulan Kişi İçin Not
-                  </label>
-                  <textarea 
-                    className="w-full bg-slate-50 dark:bg-dark-input border border-slate-300 dark:border-gray-700 rounded-xl p-3 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-red-500/50 min-h-[100px]"
-                    placeholder="Örn: Sol arka ayağı aksıyor, ismini söylerseniz gelir..."
-                    value={message}
-                    onChange={(e) => setMessage(e.target.value)}
-                  />
+                  </button>
               </div>
           </div>
-      )}
+      </div>
 
-      {/* --- SAFE VERIFICATION FORM AREA --- */}
-      {/* Show ONLY if currently inactive (Safe) AND we have unsaved changes (meaning we just toggled from Active) 
-          OR if the user is verified as lost in DB but trying to switch to safe locally. */}
-      {!isActive && pet.lostStatus?.isActive && (
-         <div className="bg-white dark:bg-dark-surface/50 p-6 rounded-2xl border border-green-200 dark:border-green-800/50 shadow-sm animate-in zoom-in-95 duration-300">
-            <div className="flex flex-col items-center mb-6 text-center">
-                <div className="bg-green-100 dark:bg-green-900/30 p-3 rounded-full mb-3 text-green-600 dark:text-green-400">
-                    <ShieldCheck size={32} />
+      <div className="px-4 -mt-6 relative z-20 max-w-lg mx-auto space-y-6">
+
+          {/* --- ACTIVE (LOST) FORM AREA --- */}
+          {isActive && (
+              <div className="animate-in slide-in-from-bottom-4 fade-in duration-500 space-y-6">
+                  
+                  {/* Info Card */}
+                  <div className="bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/30 p-4 rounded-2xl flex gap-3 items-start shadow-sm">
+                      <div className="bg-red-100 dark:bg-red-800/30 p-2 rounded-full shrink-0">
+                        <Radar className="text-red-600 dark:text-red-400" size={20} />
+                      </div>
+                      <p className="text-sm text-red-800 dark:text-red-200 mt-1">
+                          Aşağıdaki bilgileri doldurup <strong>Bildirimi Güncelle</strong> butonuna basarak QR kod okutulduğunda görünecek verileri güncelleyin.
+                      </p>
+                  </div>
+
+                  {/* Map Section */}
+                  <div className="bg-white dark:bg-slate-800 rounded-3xl p-1 shadow-lg border border-slate-200 dark:border-slate-700">
+                      <div className="px-5 py-4 flex justify-between items-center">
+                          <label className="flex items-center gap-2 text-sm font-bold text-slate-700 dark:text-gray-200">
+                              <MapPin className="text-red-500" size={18} />
+                              Son Görülen Konum
+                          </label>
+                          <button 
+                            onClick={getUserLocation}
+                            className="text-xs flex items-center gap-1 bg-red-50 text-red-600 px-3 py-1.5 rounded-full hover:bg-red-100 dark:bg-red-900/20 dark:text-red-300 transition-colors font-semibold"
+                          >
+                              <Navigation size={12} /> Konumumu Al
+                          </button>
+                      </div>
+                      
+                      <div className="relative w-full h-72 rounded-2xl overflow-hidden bg-slate-100 dark:bg-slate-900 touch-none">
+                          <div id="map" ref={mapRef} className="w-full h-full z-10" />
+                          
+                          {/* Map Overlay Controls */}
+                          {!isMapInteractive && (
+                              <div className="absolute inset-0 z-[50] bg-slate-900/20 backdrop-blur-[2px] flex flex-col items-center justify-center transition-opacity">
+                                  <button 
+                                    onClick={() => setIsMapInteractive(true)}
+                                    className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white px-5 py-2.5 rounded-full font-bold text-sm shadow-xl flex items-center gap-2 hover:scale-105 transition-transform"
+                                  >
+                                      <Hand size={16} className="text-red-500" /> Haritaya Müdahale Et
+                                  </button>
+                              </div>
+                          )}
+                          
+                          {isMapInteractive && (
+                              <button 
+                                onClick={() => setIsMapInteractive(false)}
+                                className="absolute top-3 right-3 z-[50] bg-white/90 dark:bg-slate-800/90 p-2.5 rounded-xl shadow-lg text-slate-700 dark:text-gray-200 hover:bg-slate-100"
+                              >
+                                  <Lock size={18} />
+                              </button>
+                          )}
+                      </div>
+
+                      {location && (
+                         <div className="px-5 py-3 bg-slate-50 dark:bg-slate-800/50 rounded-b-3xl flex justify-between items-center">
+                             <p className="text-[10px] text-slate-400 font-mono tracking-wide">
+                                 KOORDİNAT: {location.lat.toFixed(6)}, {location.lng.toFixed(6)}
+                             </p>
+                             <div className="flex items-center gap-1 text-[10px] font-bold text-slate-400">
+                                 {isMapInteractive ? <Unlock size={10} /> : <Lock size={10} />}
+                                 <span>{isMapInteractive ? 'DÜZENLENEBİLİR' : 'KİLİTLİ'}</span>
+                             </div>
+                         </div>
+                      )}
+                  </div>
+
+                  {/* Note Section */}
+                  <div className="bg-white dark:bg-slate-800 p-5 rounded-3xl shadow-lg border border-slate-200 dark:border-slate-700">
+                      <label className="block text-sm font-bold text-slate-700 dark:text-gray-200 mb-3 flex items-center gap-2">
+                          <Info size={18} className="text-blue-500" />
+                          Bulan Kişi İçin Not
+                      </label>
+                      <textarea 
+                        className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl p-4 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-red-500/50 min-h-[120px] resize-none leading-relaxed"
+                        placeholder="Örn: İsmi Pamuk. Sol arka ayağı aksıyor, ürkek davranabilir. Lütfen yaklaşırken adıyla seslenin..."
+                        value={message}
+                        onChange={(e) => setMessage(e.target.value)}
+                      />
+                  </div>
+              </div>
+          )}
+
+          {/* --- SAFE VERIFICATION FORM AREA --- */}
+          {!isActive && pet.lostStatus?.isActive && (
+             <div className="bg-white dark:bg-slate-800 p-6 rounded-3xl border-2 border-green-100 dark:border-green-900/50 shadow-xl animate-in zoom-in-95 duration-300 relative overflow-hidden">
+                {/* Decorative BG */}
+                <div className="absolute top-0 right-0 w-32 h-32 bg-green-500/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2"></div>
+                
+                <div className="flex flex-col items-center mb-6 text-center relative z-10">
+                    <div className="bg-green-100 dark:bg-green-900/30 p-3 rounded-full mb-3 text-green-600 dark:text-green-400">
+                        <KeyRound size={32} />
+                    </div>
+                    <h3 className="text-lg font-bold text-slate-900 dark:text-white">Güvenlik Kontrolü</h3>
+                    <p className="text-sm text-slate-500 dark:text-gray-400 mt-1 max-w-[200px]">
+                        Alarmı kapatmak için lütfen giriş şifrenizi doğrulayın.
+                    </p>
                 </div>
-                <h3 className="text-lg font-bold text-slate-800 dark:text-white">Güvenlik Kontrolü</h3>
-                <p className="text-sm text-slate-500 dark:text-gray-400 mt-1">
-                    Kayıp durumunu kapatmak için lütfen hesabınızın şifresini girin.
-                </p>
-            </div>
 
-            <div className="space-y-4">
-                <Input
-                    type="password"
-                    label="Hesap Şifresi"
-                    placeholder="Şifrenizi girin"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    error={passError}
-                    rightElement={<KeyRound size={18} className="text-slate-400" />}
-                />
-            </div>
-         </div>
-      )}
-      
-      {/* Dynamic Save Button - ONLY SHOW IF CHANGES EXIST */}
-      {localHasChanges && (
-          <div className="mt-8 animate-in slide-in-from-bottom-2 fade-in">
-             <button 
-                onClick={handleSave}
-                disabled={!isActive && !password && pet.lostStatus?.isActive}
-                className={`
-                    w-full py-4 rounded-2xl shadow-lg flex items-center justify-center gap-2 active:scale-95 transition-all font-bold text-white
-                    disabled:opacity-50 disabled:cursor-not-allowed
-                    ${isActive 
-                        ? 'bg-red-600 hover:bg-red-500 shadow-red-500/30' 
-                        : 'bg-green-600 hover:bg-green-500 shadow-green-500/30'}
-                `}
-              >
-                  {isActive ? <Save size={20} /> : <CheckCircle2 size={20} />}
-                  {isActive ? 'BİLDİRİMİ GÜNCELLE' : 'GÜVENDE OLARAK KAYDET'}
-              </button>
-          </div>
-      )}
+                <div className="space-y-4 relative z-10">
+                    <Input
+                        type="password"
+                        placeholder="Hesap Şifresi"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        error={passError}
+                        className="!bg-slate-50 dark:!bg-slate-900 text-center tracking-widest font-bold"
+                    />
+                </div>
+             </div>
+          )}
+          
+          {/* Dynamic Save Button - ONLY SHOW IF CHANGES EXIST */}
+          {localHasChanges && (
+              <div className="fixed bottom-20 left-4 right-4 z-40 animate-in slide-in-from-bottom-2 fade-in">
+                 <button 
+                    onClick={handleSave}
+                    disabled={!isActive && !password && pet.lostStatus?.isActive}
+                    className={`
+                        w-full py-4 rounded-2xl shadow-2xl flex items-center justify-center gap-3 active:scale-95 transition-all font-bold text-white text-lg
+                        disabled:opacity-50 disabled:cursor-not-allowed
+                        ${isActive 
+                            ? 'bg-gradient-to-r from-red-600 to-rose-600 shadow-red-500/40' 
+                            : 'bg-gradient-to-r from-emerald-600 to-teal-600 shadow-emerald-500/40'}
+                    `}
+                  >
+                      {isActive ? <Save size={24} /> : <ShieldCheck size={24} />}
+                      {isActive ? 'BİLDİRİMİ GÜNCELLE' : 'GÜVENLİ OLARAK İŞARETLE'}
+                  </button>
+              </div>
+          )}
+
+      </div>
 
       {/* --- MODAL 1: LOST ACTIVATED --- */}
       {showActiveModal && (
@@ -425,8 +452,8 @@ export const LostMode: React.FC<LostModeProps> = ({ user, pet, onSavePet, setHas
             <div className="bg-white dark:bg-slate-900 w-full max-w-sm rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300 border border-slate-200 dark:border-slate-800">
                  <div className="bg-red-500 h-2 w-full"></div>
                  <div className="p-6">
-                     <div className="w-14 h-14 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mb-5 mx-auto text-red-600 dark:text-red-400">
-                        <Siren size={28} className="animate-pulse" />
+                     <div className="w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mb-5 mx-auto text-red-600 dark:text-red-400">
+                        <Siren size={32} className="animate-pulse" />
                      </div>
                      
                      <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-4 text-center">
@@ -435,32 +462,26 @@ export const LostMode: React.FC<LostModeProps> = ({ user, pet, onSavePet, setHas
                      
                      <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-100 dark:border-slate-800 mb-4">
                         <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed text-center">
-                            <span className="font-bold text-black dark:text-white">{pet.name.value}</span> adlı dostumuz için acil durum kaydı oluşturuldu.
+                            <span className="font-bold text-black dark:text-white">{pet.name.value}</span> için acil durum kaydı oluşturuldu.
                         </p>
                      </div>
 
                      <div className="space-y-3 text-xs text-slate-600 dark:text-slate-400">
-                        <div className="flex gap-3">
-                            <div className="min-w-[4px] bg-red-500 rounded-full opacity-50"></div>
-                            <p>İşaretlediğiniz bölgedeki gönüllü kişilere bildirim gönderiliyor. Dostumuzu bulurlarsa QR kod okutarak size ulaşabilecekler.</p>
+                        <div className="flex gap-3 items-start">
+                            <CheckCircle2 size={16} className="text-red-500 shrink-0 mt-0.5" />
+                            <p>QR kod okutulduğunda "Kayıp" uyarısı ve iletişim bilgileri gösterilecek.</p>
                         </div>
-                        <div className="flex gap-3">
-                             <div className="min-w-[4px] bg-red-500 rounded-full opacity-50"></div>
-                             <p>QR kodu üzerinde değilse, yüklediğiniz fotoğraf ve verdiğiniz bilgiler bulunmasına yardımcı olacaktır.</p>
-                        </div>
-                        <div className="flex gap-3 pt-2">
-                             <Info size={32} className="text-blue-500 shrink-0" />
-                             <p className="font-medium text-slate-900 dark:text-white">
-                                Lütfen "Ayarlar" menüsünden iletişim bilgilerinizin ve acil durum kişisinin güncel olduğundan emin olun.
-                             </p>
+                        <div className="flex gap-3 items-start">
+                             <CheckCircle2 size={16} className="text-red-500 shrink-0 mt-0.5" />
+                             <p>İletişim bilgilerinizin ve 2. şahıs numarasının güncel olduğundan emin olun.</p>
                         </div>
                      </div>
 
                      <button 
                         onClick={() => setShowActiveModal(false)}
-                        className="w-full mt-6 bg-red-600 hover:bg-red-700 text-white py-3.5 rounded-xl font-bold text-sm shadow-lg shadow-red-500/20 active:scale-95 transition-all"
+                        className="w-full mt-6 bg-red-600 hover:bg-red-700 text-white py-4 rounded-xl font-bold text-sm shadow-lg shadow-red-500/20 active:scale-95 transition-all"
                      >
-                        Anlaşıldı
+                        Tamam, Anlaşıldı
                      </button>
                  </div>
             </div>
@@ -471,31 +492,31 @@ export const LostMode: React.FC<LostModeProps> = ({ user, pet, onSavePet, setHas
       {showSafeModal && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/95 backdrop-blur-sm animate-in fade-in duration-300">
             <div className="bg-white dark:bg-slate-900 w-full max-w-sm rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300 border border-slate-200 dark:border-slate-800">
-                 <div className="bg-green-500 h-2 w-full"></div>
+                 <div className="bg-emerald-500 h-2 w-full"></div>
                  <div className="p-6">
-                     <div className="w-14 h-14 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mb-5 mx-auto text-green-600 dark:text-green-400">
-                        <CheckCircle2 size={32} />
+                     <div className="w-16 h-16 bg-emerald-100 dark:bg-emerald-900/30 rounded-full flex items-center justify-center mb-5 mx-auto text-emerald-600 dark:text-emerald-400">
+                        <CheckCircle2 size={36} />
                      </div>
                      
                      <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2 text-center">
-                         Harika Haber!
+                         Tehlike Geçti!
                      </h3>
                      <p className="text-center text-slate-500 dark:text-gray-400 mb-6 text-sm">
                          Dostumuzun güvende olmasına çok sevindik.
                      </p>
                      
-                     <div className="bg-green-50 dark:bg-green-900/10 p-4 rounded-xl border border-green-100 dark:border-green-800 mb-4 flex gap-3 items-center">
-                        <ShieldCheck className="text-green-600 dark:text-green-400 shrink-0" size={20} />
-                        <p className="text-xs text-green-800 dark:text-green-200">
-                            Kayıp ilanı yayından kaldırıldı ve bildirim gönderilen gönüllülere haber verildi.
+                     <div className="bg-emerald-50 dark:bg-emerald-900/10 p-4 rounded-xl border border-emerald-100 dark:border-emerald-800 mb-4 flex gap-3 items-center">
+                        <ShieldCheck className="text-emerald-600 dark:text-emerald-400 shrink-0" size={20} />
+                        <p className="text-xs text-emerald-800 dark:text-emerald-200 font-medium">
+                            Kayıp ilanı başarıyla kaldırıldı. Sistem normale döndü.
                         </p>
                      </div>
 
                      <button 
                         onClick={() => setShowSafeModal(false)}
-                        className="w-full mt-2 bg-green-600 hover:bg-green-700 text-white py-3.5 rounded-xl font-bold text-sm shadow-lg shadow-green-500/20 active:scale-95 transition-all"
+                        className="w-full mt-2 bg-emerald-600 hover:bg-emerald-700 text-white py-4 rounded-xl font-bold text-sm shadow-lg shadow-emerald-500/20 active:scale-95 transition-all"
                      >
-                        Teşekkürler
+                        Ana Sayfaya Dön
                      </button>
                  </div>
             </div>
