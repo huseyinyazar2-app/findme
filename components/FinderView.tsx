@@ -1,7 +1,7 @@
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { PetProfile, UserProfile } from '../types';
-import { Phone, Mail, MapPin, AlertTriangle, User, ShieldCheck, Heart, Navigation, Info, Siren, Users, Calendar } from 'lucide-react';
+import { Phone, Mail, MapPin, AlertTriangle, User, ShieldCheck, Heart, Navigation, Info, Siren, Users, Calendar, X, ZoomIn } from 'lucide-react';
 import { ContactPreference } from '../types';
 import L from 'leaflet';
 
@@ -35,6 +35,8 @@ setupLeafletIcons();
 
 export const FinderView: React.FC<FinderViewProps> = ({ pet, owner, onLoginClick }) => {
   const isLost = pet.lostStatus?.isActive;
+  const [isExpanded, setIsExpanded] = useState(false);
+  
   const mapRef = useRef<HTMLDivElement>(null);
   const leafletMap = useRef<L.Map | null>(null);
 
@@ -105,47 +107,61 @@ export const FinderView: React.FC<FinderViewProps> = ({ pet, owner, onLoginClick
 
       <div className="max-w-lg mx-auto bg-white shadow-sm">
         
-        {/* 2. COMPACT HERO SECTION (Image + Overlay Name) */}
-        <div className="relative w-full h-96 bg-slate-100 overflow-hidden group">
-            {pet.photoUrl.value ? (
-                <>
-                    {/* Blurred Background to fill space */}
-                    <div className="absolute inset-0">
-                        <img src={pet.photoUrl.value} className="w-full h-full object-cover blur-xl opacity-50 scale-110" alt="" />
+        {/* 2. INSTAGRAM-STYLE PROFILE HEADER */}
+        <div className="px-6 py-6 flex items-center gap-5 border-b border-slate-100">
+             
+             {/* Profile Image with Gradient Border */}
+             <div 
+                className="relative shrink-0 cursor-pointer group"
+                onClick={() => pet.photoUrl.value && setIsExpanded(true)}
+             >
+                {/* Colorful Ring */}
+                <div className={`
+                    rounded-full p-[3px] 
+                    ${isLost 
+                        ? 'bg-gradient-to-tr from-red-500 via-orange-500 to-yellow-500 animate-pulse-slow' 
+                        : 'bg-gradient-to-tr from-emerald-500 via-teal-500 to-cyan-500'}
+                `}>
+                    <div className="rounded-full border-[3px] border-white bg-slate-100 overflow-hidden w-24 h-24 relative">
+                         {pet.photoUrl.value ? (
+                             <img 
+                                src={pet.photoUrl.value} 
+                                alt={pet.name.value} 
+                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
+                             />
+                         ) : (
+                             <div className="w-full h-full flex items-center justify-center text-slate-300">
+                                <User size={32} />
+                             </div>
+                         )}
                     </div>
-                    {/* Main Image */}
-                    <img 
-                        src={pet.photoUrl.value} 
-                        alt={pet.name.value} 
-                        className="relative z-10 w-full h-full object-contain" 
-                    />
-                </>
-            ) : (
-                <div className="w-full h-full flex flex-col items-center justify-center text-slate-400 bg-slate-100">
-                    <User size={64} />
-                    <p className="text-sm font-bold mt-2">Fotoğraf Yok</p>
                 </div>
-            )}
-
-            {/* Gradient Overlay for Text Readability */}
-            <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-black/90 via-black/40 to-transparent z-20"></div>
-
-            {/* Text Overlay */}
-            <div className="absolute bottom-4 left-4 right-4 z-30 text-white">
-                 <div className="flex items-end justify-between">
-                    <div>
-                        <h2 className="text-4xl font-black uppercase tracking-tight leading-none shadow-black drop-shadow-md mb-1">
-                            {pet.name.value}
-                        </h2>
-                        <span className="inline-block px-2 py-0.5 rounded bg-white/20 backdrop-blur-md border border-white/30 text-xs font-bold uppercase tracking-wider">
-                            {pet.type}
-                        </span>
+                
+                {/* Tiny Hint Icon */}
+                {pet.photoUrl.value && (
+                    <div className="absolute bottom-0 right-0 bg-white rounded-full p-1.5 shadow-md border border-slate-100 text-slate-400">
+                        <ZoomIn size={14} />
                     </div>
+                )}
+             </div>
+
+             {/* Text Info Side */}
+             <div className="flex-1 min-w-0">
+                 <div className="flex items-center gap-2 mb-1.5">
+                    <span className="inline-block px-2.5 py-0.5 rounded-full bg-slate-100 border border-slate-200 text-slate-500 text-[10px] font-bold uppercase tracking-wider">
+                        {pet.type}
+                    </span>
                  </div>
-            </div>
+                 <h2 className="text-3xl font-black text-slate-900 leading-none uppercase tracking-tight break-words">
+                     {pet.name.value}
+                 </h2>
+                 <p className="text-[10px] text-slate-400 font-medium mt-1.5 flex items-center gap-1">
+                    Büyütmek için resme tıklayın
+                 </p>
+             </div>
         </div>
 
-        {/* 3. OWNER NOTE (Immediately Below) */}
+        {/* 3. OWNER NOTE */}
         {pet.lostStatus?.message && (
             <div className="bg-yellow-50 border-b border-yellow-100 p-5">
                 <div className="flex items-start gap-3">
@@ -275,6 +291,32 @@ export const FinderView: React.FC<FinderViewProps> = ({ pet, owner, onLoginClick
         </div>
 
       </div>
+
+      {/* FULL SCREEN IMAGE MODAL (LIGHTBOX) */}
+      {isExpanded && pet.photoUrl.value && (
+          <div className="fixed inset-0 z-[9999] bg-black/95 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-300" onClick={() => setIsExpanded(false)}>
+              
+              {/* Close Button */}
+              <button 
+                  onClick={(e) => {
+                      e.stopPropagation();
+                      setIsExpanded(false);
+                  }}
+                  className="absolute top-6 right-6 z-50 p-2 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors"
+              >
+                  <X size={32} />
+              </button>
+
+              <div className="relative w-full max-w-2xl max-h-screen flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
+                   <img 
+                       src={pet.photoUrl.value} 
+                       alt={pet.name.value} 
+                       className="w-full h-auto max-h-[85vh] object-contain rounded-lg shadow-2xl animate-in zoom-in-95 duration-300" 
+                   />
+              </div>
+          </div>
+      )}
+
     </div>
   );
 };
