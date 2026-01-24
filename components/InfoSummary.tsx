@@ -1,15 +1,15 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { UserProfile, PetProfile, PetType } from '../types';
 import { TURKEY_CITIES, CITY_NAMES, TEMPERAMENT_OPTIONS, formatPhoneNumber } from '../constants';
 import { Edit2, Check, X, User, Dog, MapPin, Phone, ShieldAlert, FileText, Info, CheckCircle2, Camera } from 'lucide-react';
 
 // --- Extracted Component: FieldEditor ---
-// Handles the input logic outside the main component to prevent re-mounting on keystrokes
 interface FieldEditorProps {
     fieldKey: string;
     value: string;
     onChange: (val: string) => void;
-    userCity?: string; // Needed for district selection
+    userCity?: string; 
     isCustom: boolean;
     onCustomChange: (isCustom: boolean) => void;
 }
@@ -21,7 +21,7 @@ const FieldEditor: React.FC<FieldEditorProps> = ({ fieldKey, value, onChange, us
         return (
             <div className="relative">
                 <select 
-                    className="w-full bg-white dark:bg-dark-input border border-matrix-500 rounded p-1.5 text-sm text-slate-900 dark:text-white outline-none"
+                    className="w-full bg-white dark:bg-slate-900 border border-matrix-500 rounded-lg p-2 text-sm text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-matrix-200"
                     value={value}
                     onChange={(e) => onChange(e.target.value)}
                 >
@@ -38,7 +38,7 @@ const FieldEditor: React.FC<FieldEditorProps> = ({ fieldKey, value, onChange, us
         return (
             <div className="relative">
                 <select 
-                    className="w-full bg-white dark:bg-dark-input border border-matrix-500 rounded p-1.5 text-sm text-slate-900 dark:text-white outline-none"
+                    className="w-full bg-white dark:bg-slate-900 border border-matrix-500 rounded-lg p-2 text-sm text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-matrix-200"
                     value={value}
                     onChange={(e) => onChange(e.target.value)}
                 >
@@ -58,13 +58,13 @@ const FieldEditor: React.FC<FieldEditorProps> = ({ fieldKey, value, onChange, us
         return (
         <div className="space-y-2">
             <select 
-                className="w-full bg-white dark:bg-dark-input border border-matrix-500 rounded p-1.5 text-sm text-slate-900 dark:text-white outline-none"
+                className="w-full bg-white dark:bg-slate-900 border border-matrix-500 rounded-lg p-2 text-sm text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-matrix-200"
                 value={dropdownValue}
                 onChange={(e) => {
                     const val = e.target.value;
                     if (val === PetType.OTHER) {
                         onCustomChange(true);
-                        onChange(''); // Clear for typing
+                        onChange(''); 
                     } else {
                         onCustomChange(false);
                         onChange(val);
@@ -76,7 +76,7 @@ const FieldEditor: React.FC<FieldEditorProps> = ({ fieldKey, value, onChange, us
             
             {isCustom && (
                     <input 
-                    className="w-full bg-white dark:bg-dark-input border border-matrix-500 rounded p-1.5 text-sm text-slate-900 dark:text-white outline-none animate-in fade-in slide-in-from-top-1"
+                    className="w-full bg-white dark:bg-slate-900 border border-matrix-500 rounded-lg p-2 text-sm text-slate-900 dark:text-white outline-none animate-in fade-in slide-in-from-top-1"
                     value={value}
                     onChange={(e) => onChange(e.target.value)}
                     placeholder="Hayvan türünü belirtin"
@@ -93,7 +93,7 @@ const FieldEditor: React.FC<FieldEditorProps> = ({ fieldKey, value, onChange, us
         return (
             <div className="space-y-2">
             <select 
-                className="w-full bg-white dark:bg-dark-input border border-matrix-500 rounded p-1.5 text-sm text-slate-900 dark:text-white outline-none"
+                className="w-full bg-white dark:bg-slate-900 border border-matrix-500 rounded-lg p-2 text-sm text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-matrix-200"
                 value={dropdownValue}
                 onChange={(e) => {
                     const val = e.target.value;
@@ -113,7 +113,7 @@ const FieldEditor: React.FC<FieldEditorProps> = ({ fieldKey, value, onChange, us
 
             {isCustom && (
                     <input 
-                    className="w-full bg-white dark:bg-dark-input border border-matrix-500 rounded p-1.5 text-sm text-slate-900 dark:text-white outline-none animate-in fade-in slide-in-from-top-1"
+                    className="w-full bg-white dark:bg-slate-900 border border-matrix-500 rounded-lg p-2 text-sm text-slate-900 dark:text-white outline-none animate-in fade-in slide-in-from-top-1"
                     value={value}
                     onChange={(e) => onChange(e.target.value)}
                     placeholder="Huy bilgisini yazın"
@@ -128,7 +128,7 @@ const FieldEditor: React.FC<FieldEditorProps> = ({ fieldKey, value, onChange, us
         return (
         <input 
             type="tel"
-            className="w-full bg-white dark:bg-dark-input border border-matrix-500 rounded p-1.5 text-sm text-slate-900 dark:text-white outline-none"
+            className="w-full bg-white dark:bg-slate-900 border border-matrix-500 rounded-lg p-2 text-sm text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-matrix-200"
             value={value}
             onChange={(e) => onChange(formatPhoneNumber(e.target.value))}
             placeholder="0555 555 55 55"
@@ -139,7 +139,7 @@ const FieldEditor: React.FC<FieldEditorProps> = ({ fieldKey, value, onChange, us
     // 6. Standard Text Input
     return (
         <input 
-            className="w-full bg-white dark:bg-dark-input border border-matrix-500 rounded p-1.5 text-sm text-slate-900 dark:text-white outline-none"
+            className="w-full bg-white dark:bg-slate-900 border border-matrix-500 rounded-lg p-2 text-sm text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-matrix-200"
             value={value}
             onChange={(e) => onChange(e.target.value)}
         />
@@ -147,7 +147,6 @@ const FieldEditor: React.FC<FieldEditorProps> = ({ fieldKey, value, onChange, us
 };
 
 // --- Extracted Component: InfoRow ---
-// Handles the row layout, edit buttons, and displays the FieldEditor when editing
 interface InfoRowProps {
     label: string;
     value: string | undefined | null;
@@ -175,12 +174,15 @@ const InfoRow: React.FC<InfoRowProps> = ({
     const displayValue = value || '-';
 
     return (
-        <div className="flex flex-col border-b border-slate-100 dark:border-gray-800 last:border-0 hover:bg-slate-50 dark:hover:bg-gray-800/30 transition-colors">
+        <div className="flex flex-col border-b border-slate-100 dark:border-slate-800 last:border-0 hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors group">
             <div className="flex items-center justify-between p-4">
-            <div className="flex items-center gap-3 flex-1 overflow-hidden">
-                {Icon && <Icon size={18} className="text-matrix-500 shrink-0" />}
+            <div className="flex items-center gap-4 flex-1 overflow-hidden">
+                <div className={`p-2 rounded-lg ${isEditing ? 'bg-matrix-100 dark:bg-matrix-900/50' : 'bg-slate-100 dark:bg-slate-800'} text-matrix-600 dark:text-matrix-400 shrink-0 transition-colors`}>
+                    {Icon && <Icon size={18} />}
+                </div>
+                
                 <div className="flex flex-col flex-1 min-w-0">
-                    <span className="text-xs font-semibold text-slate-400 dark:text-gray-500 uppercase tracking-wider">{label}</span>
+                    <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-0.5">{label}</span>
                     
                     {isEditing ? (
                         <div className="mt-1 animate-in fade-in zoom-in-95 duration-200">
@@ -194,7 +196,7 @@ const InfoRow: React.FC<InfoRowProps> = ({
                             />
                         </div>
                     ) : (
-                        <span className="text-sm font-medium text-slate-800 dark:text-gray-200 truncate pr-2 mt-0.5">
+                        <span className="text-sm font-semibold text-slate-800 dark:text-slate-200 truncate pr-2">
                             {displayValue}
                         </span>
                     )}
@@ -204,18 +206,18 @@ const InfoRow: React.FC<InfoRowProps> = ({
             <div className="pl-2 shrink-0">
                 {isEditing ? (
                     <div className="flex gap-2">
-                        <button onClick={onSave} className="p-1.5 bg-matrix-100 text-matrix-600 rounded-lg hover:bg-matrix-200 dark:bg-matrix-900 dark:text-matrix-400">
-                            <Check size={18} />
+                        <button onClick={onSave} className="p-2 bg-matrix-600 text-white rounded-lg shadow-md hover:bg-matrix-700 transition-colors">
+                            <Check size={16} />
                         </button>
-                        <button onClick={onCancel} className="p-1.5 bg-red-50 text-red-500 rounded-lg hover:bg-red-100 dark:bg-red-900/20 dark:text-red-400">
-                            <X size={18} />
+                        <button onClick={onCancel} className="p-2 bg-white border border-slate-200 text-slate-500 rounded-lg hover:bg-slate-50 hover:text-red-500 transition-colors dark:bg-slate-800 dark:border-slate-700 dark:text-slate-400">
+                            <X size={16} />
                         </button>
                     </div>
                 ) : (
                     isEditable && (
                         <button 
                             onClick={() => onStartEdit(fieldKey, value || '')}
-                            className="p-2 text-slate-400 hover:text-matrix-600 dark:hover:text-matrix-400 transition-colors"
+                            className="p-2 text-slate-300 hover:text-matrix-600 hover:bg-matrix-50 rounded-lg transition-all dark:text-slate-600 dark:hover:text-matrix-400 dark:hover:bg-matrix-900/20"
                         >
                             <Edit2 size={16} />
                         </button>
@@ -226,10 +228,10 @@ const InfoRow: React.FC<InfoRowProps> = ({
             
             {/* Success Message Area */}
             {showSuccess && (
-                <div className="bg-green-50 dark:bg-green-900/10 px-4 py-1.5 flex items-center gap-2 animate-in slide-in-from-top-1 fade-in duration-300">
-                    <CheckCircle2 size={12} className="text-green-600 dark:text-green-400" />
-                    <span className="text-[10px] font-medium text-green-700 dark:text-green-400">
-                        Değişiklikler başarıyla kaydedildi
+                <div className="bg-emerald-50 dark:bg-emerald-900/10 px-4 py-2 flex items-center gap-2 animate-in slide-in-from-top-1 fade-in duration-300">
+                    <CheckCircle2 size={14} className="text-emerald-600 dark:text-emerald-400" />
+                    <span className="text-xs font-bold text-emerald-700 dark:text-emerald-400">
+                        Güncellendi
                     </span>
                 </div>
             )}
@@ -246,17 +248,10 @@ interface InfoSummaryProps {
 
 // --- Main Component ---
 export const InfoSummary: React.FC<InfoSummaryProps> = ({ user, pet, onUpdateUser, onSavePet }) => {
-  // State to track which field is being edited
   const [editingField, setEditingField] = useState<string | null>(null);
   const [tempValue, setTempValue] = useState<string>('');
-  
-  // State to handle custom input modes (for "Other" selection)
   const [isCustomSelection, setIsCustomSelection] = useState(false);
-  
-  // Ref for file input
   const fileInputRef = useRef<HTMLInputElement>(null);
-  
-  // State for success feedback
   const [successField, setSuccessField] = useState<string | null>(null);
 
   useEffect(() => {
@@ -271,21 +266,15 @@ export const InfoSummary: React.FC<InfoSummaryProps> = ({ user, pet, onUpdateUse
   const startEditing = (fieldKey: string, currentValue: string) => {
     setEditingField(fieldKey);
     setTempValue(currentValue);
-    setSuccessField(null); // Clear old success messages
-    
-    // Determine if we need to start in "Custom" mode
-    setIsCustomSelection(false); // Reset default
+    setSuccessField(null);
+    setIsCustomSelection(false);
 
-    // Logic for Temperament "Other" detection
     if (fieldKey === 'pet.temperament') {
         const isStandard = TEMPERAMENT_OPTIONS.includes(currentValue);
-        // If it has a value but it's not in the standard list, it's custom
         if (currentValue && !isStandard) {
             setIsCustomSelection(true);
         }
     }
-
-    // Logic for Pet Type "Other" detection
     if (fieldKey === 'pet.type') {
          const isStandard = Object.values(PetType).includes(currentValue as PetType);
          if (!isStandard) {
@@ -305,31 +294,22 @@ export const InfoSummary: React.FC<InfoSummaryProps> = ({ user, pet, onUpdateUse
 
     if (editingField.startsWith('user.')) {
       const field = editingField.split('.')[1] as keyof UserProfile;
-      
       let updatedUser = { ...user, [field]: tempValue };
-      
-      // If city changed, reset district
       if (field === 'city' && tempValue !== user.city) {
           updatedUser.district = ''; 
       }
-
       onUpdateUser(updatedUser);
     } else if (editingField.startsWith('pet.') && pet) {
       const field = editingField.split('.')[1] as keyof PetProfile;
-      
-      // Handle PrivacyField structure vs direct value
       const currentPetField = pet[field];
-      
       let updatedPet = { ...pet };
       
       if (typeof currentPetField === 'object' && currentPetField !== null && 'value' in currentPetField) {
-         // It's a PrivacyField
          updatedPet = {
             ...pet,
             [field]: { ...currentPetField, value: tempValue }
          };
       } else {
-         // It's a direct string
          updatedPet = {
             ...pet,
             [field]: tempValue
@@ -347,12 +327,10 @@ export const InfoSummary: React.FC<InfoSummaryProps> = ({ user, pet, onUpdateUse
     if (e.target.files && e.target.files[0] && pet) {
       const file = e.target.files[0];
       const imageUrl = URL.createObjectURL(file);
-      
       const updatedPet = {
         ...pet,
         photoUrl: { ...pet.photoUrl, value: imageUrl }
       };
-      
       onSavePet(updatedPet);
       setSuccessField('photo');
     }
@@ -365,20 +343,30 @@ export const InfoSummary: React.FC<InfoSummaryProps> = ({ user, pet, onUpdateUse
   };
 
   return (
-    <div className="pb-24 pt-6 px-4 max-w-lg mx-auto animate-in fade-in">
-      <div className="flex items-center gap-2 mb-6">
-        <FileText className="text-matrix-600 dark:text-matrix-500" size={28} />
-        <h2 className="text-2xl font-bold text-slate-900 dark:text-white tracking-wide">
-            Kayıtlı Bilgiler
-        </h2>
+    <div className="pb-32 pt-8 px-4 max-w-lg mx-auto animate-in fade-in space-y-8">
+      
+      {/* Page Header */}
+      <div className="flex items-center gap-3 px-1">
+        <div className="w-12 h-12 bg-white dark:bg-slate-800 rounded-2xl flex items-center justify-center shadow-md border border-slate-100 dark:border-slate-700 text-matrix-600 dark:text-matrix-400">
+             <FileText size={24} />
+        </div>
+        <div>
+            <h2 className="text-2xl font-black text-slate-800 dark:text-white tracking-tight">
+                Kayıtlı Bilgiler
+            </h2>
+            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+                Profil ve evcil hayvan detayları
+            </p>
+        </div>
       </div>
 
-      <div className="space-y-6">
-        {/* User Info Section */}
-        <section className="bg-white dark:bg-dark-surface/50 rounded-2xl shadow-sm border border-slate-200 dark:border-gray-800/60 overflow-hidden">
-            <div className="bg-slate-50 dark:bg-gray-900/50 px-4 py-2 border-b border-slate-200 dark:border-gray-800 flex items-center gap-2">
-                <User size={16} className="text-slate-500" />
-                <h3 className="font-bold text-slate-700 dark:text-gray-300 text-sm">Kullanıcı Bilgileri</h3>
+      {/* User Info Section */}
+      <section className="bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
+            <div className="bg-slate-50 dark:bg-slate-800/50 px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center gap-3">
+                <div className="bg-blue-100 dark:bg-blue-900/30 p-1.5 rounded-lg text-blue-600 dark:text-blue-400">
+                    <User size={18} />
+                </div>
+                <h3 className="font-bold text-slate-700 dark:text-slate-200 text-sm tracking-wide">Kullanıcı Bilgileri</h3>
             </div>
             
             <InfoRow 
@@ -402,7 +390,7 @@ export const InfoSummary: React.FC<InfoSummaryProps> = ({ user, pet, onUpdateUse
                 value={user.email} 
                 fieldKey="user.email" 
                 isEditable={false} 
-                icon={User}
+                icon={Info}
                 isEditing={false}
                 showSuccess={false}
                 onStartEdit={startEditing}
@@ -444,32 +432,33 @@ export const InfoSummary: React.FC<InfoSummaryProps> = ({ user, pet, onUpdateUse
                 isCustom={isCustomSelection}
                 onCustomChange={setIsCustomSelection}
             />
-        </section>
+      </section>
 
-        {/* Pet Info Section */}
-        {pet ? (
-            <section className="bg-white dark:bg-dark-surface/50 rounded-2xl shadow-sm border border-slate-200 dark:border-gray-800/60 overflow-hidden">
-                <div className="bg-slate-50 dark:bg-gray-900/50 px-4 py-2 border-b border-slate-200 dark:border-gray-800 flex items-center gap-2">
-                    <Dog size={16} className="text-slate-500" />
-                    <h3 className="font-bold text-slate-700 dark:text-gray-300 text-sm">Hayvan Bilgileri</h3>
+      {/* Pet Info Section */}
+      {pet ? (
+          <section className="bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
+                <div className="bg-slate-50 dark:bg-slate-800/50 px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center gap-3">
+                    <div className="bg-matrix-100 dark:bg-matrix-900/30 p-1.5 rounded-lg text-matrix-600 dark:text-matrix-400">
+                        <Dog size={18} />
+                    </div>
+                    <h3 className="font-bold text-slate-700 dark:text-slate-200 text-sm tracking-wide">Evcil Hayvan Bilgileri</h3>
                 </div>
 
                 {pet.photoUrl.value && (
-                    <div className="p-4 border-b border-slate-100 dark:border-gray-800 bg-slate-50/50 dark:bg-black/20 flex flex-col items-center gap-3">
-                        {/* Image Container: w-full to use space, object-contain to show full image */}
-                        <div className="relative w-full max-h-80 flex justify-center bg-black/5 dark:bg-black/40 rounded-xl overflow-hidden group">
+                    <div className="p-6 border-b border-slate-100 dark:border-slate-800 bg-slate-50/30 dark:bg-black/20 flex flex-col items-center gap-4">
+                        <div className="relative w-full aspect-video bg-white dark:bg-slate-800 rounded-2xl overflow-hidden shadow-inner border border-slate-200 dark:border-slate-700 group">
                             <img 
                                 src={pet.photoUrl.value} 
                                 alt="Pet" 
-                                className="w-full h-auto max-h-80 object-contain" 
+                                className="w-full h-full object-contain" 
                             />
                             
                             {/* Overlay Edit Button */}
                             <button 
                                 onClick={triggerPhotoUpload}
-                                className="absolute bottom-3 right-3 p-2 bg-white/90 dark:bg-black/70 text-slate-700 dark:text-white rounded-full shadow-md hover:bg-matrix-100 dark:hover:bg-matrix-900 transition-all backdrop-blur-sm"
+                                className="absolute bottom-4 right-4 p-3 bg-white text-matrix-600 rounded-xl shadow-lg hover:bg-matrix-50 transition-all border border-slate-100"
                             >
-                                <Edit2 size={20} />
+                                <Camera size={20} />
                             </button>
                         </div>
                         
@@ -482,8 +471,8 @@ export const InfoSummary: React.FC<InfoSummaryProps> = ({ user, pet, onUpdateUse
                         />
                         
                         {successField === 'photo' && (
-                           <div className="text-green-600 dark:text-green-400 text-xs flex items-center gap-1 animate-in fade-in">
-                               <CheckCircle2 size={12} /> Fotoğraf güncellendi
+                           <div className="w-full bg-emerald-50 text-emerald-700 px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 animate-in fade-in">
+                               <CheckCircle2 size={14} /> Fotoğraf güncellendi
                            </div>
                         )}
                     </div>
@@ -505,7 +494,7 @@ export const InfoSummary: React.FC<InfoSummaryProps> = ({ user, pet, onUpdateUse
                     onCustomChange={setIsCustomSelection}
                 />
                 <InfoRow 
-                    label="Hayvan Adı" 
+                    label="Adı" 
                     value={pet.name.value} 
                     fieldKey="pet.name" 
                     icon={Info} 
@@ -584,7 +573,7 @@ export const InfoSummary: React.FC<InfoSummaryProps> = ({ user, pet, onUpdateUse
                     label="Veteriner Tel" 
                     value={pet.vetInfo?.value} 
                     fieldKey="pet.vetInfo" 
-                    icon={Info} 
+                    icon={Phone} 
                     isEditing={editingField === 'pet.vetInfo'}
                     showSuccess={successField === 'pet.vetInfo'}
                     onStartEdit={startEditing}
@@ -611,14 +600,15 @@ export const InfoSummary: React.FC<InfoSummaryProps> = ({ user, pet, onUpdateUse
                     isCustom={isCustomSelection}
                     onCustomChange={setIsCustomSelection}
                 />
-            </section>
-        ) : (
-            <div className="text-center p-8 bg-white dark:bg-dark-surface rounded-2xl border border-dashed border-slate-300 dark:border-gray-700">
-                <Dog className="mx-auto h-12 w-12 text-slate-300 dark:text-gray-600 mb-2" />
-                <p className="text-slate-500 dark:text-gray-400">Henüz bir hayvan kaydı oluşturulmadı.</p>
-            </div>
-        )}
-      </div>
+          </section>
+      ) : (
+          <div className="text-center p-12 bg-white dark:bg-slate-900 rounded-3xl border border-dashed border-slate-300 dark:border-slate-800">
+              <div className="w-16 h-16 bg-slate-50 dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4">
+                 <Dog className="text-slate-300 dark:text-slate-600" size={32} />
+              </div>
+              <p className="text-slate-500 dark:text-slate-400 font-medium">Henüz bir hayvan kaydı oluşturulmadı.</p>
+          </div>
+      )}
     </div>
   );
 };

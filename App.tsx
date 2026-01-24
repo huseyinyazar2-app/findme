@@ -34,14 +34,15 @@ const App: React.FC = () => {
   // Update Detection State
   const [updateAvailable, setUpdateAvailable] = useState(false);
 
-  // Theme Management
+  // Theme Management - DEFAULT TO LIGHT
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
     if (typeof window !== 'undefined') {
         const saved = localStorage.getItem('matrixc_theme');
         if (saved) return saved as 'light' | 'dark';
-        if (window.matchMedia('(prefers-color-scheme: dark)').matches) return 'dark';
+        // Default to light, ignore system pref for now to match user request
+        return 'light';
     }
-    return 'dark';
+    return 'light';
   });
 
   useEffect(() => {
@@ -97,7 +98,6 @@ const App: React.FC = () => {
                             .single();
                         
                         if (ownerData) {
-                             // Map all necessary fields including Emergency Contact
                              setFinderOwner({
                                  username: ownerData.username,
                                  email: ownerData.email,
@@ -107,11 +107,10 @@ const App: React.FC = () => {
                                  emergencyContactName: ownerData.emergency_contact_name,
                                  emergencyContactEmail: ownerData.emergency_contact_email,
                                  emergencyContactPhone: ownerData.emergency_contact_phone,
-                                 isEmailVerified: false // not needed here
+                                 isEmailVerified: false 
                              } as UserProfile);
                         }
                     } else {
-                        // Not lost, but registered. Ask for PIN to login as owner.
                         setQrMessage('Kayıtlı etiket. Yönetim paneli için PIN kodunu giriniz.');
                     }
                 }
@@ -124,10 +123,7 @@ const App: React.FC = () => {
         const savedUserStr = localStorage.getItem('matrixc_user_session');
         if (savedUserStr && !isFinderMode) {
              const sessionUser = JSON.parse(savedUserStr);
-             // If we are scanning a NEW QR code that doesn't match the session, logout implicitly or warn
-             // For now, if QR matches session username, auto login.
              if (qrMatch && qrMatch[1] && sessionUser.username !== qrMatch[1]) {
-                 // Different user scanned, do not auto login from session
                  return;
              }
 
@@ -151,7 +147,6 @@ const App: React.FC = () => {
   };
 
   const handleLoginAuth = async (username: string, pass: string) => {
-    // Note: username here is the QR Code (shortCode), pass is the PIN
     const result = await loginOrRegister(username, pass);
 
     if (result.success && result.user) {
@@ -159,17 +154,14 @@ const App: React.FC = () => {
         localStorage.setItem('matrixc_user_session', JSON.stringify(result.user));
 
         if (result.isNew) {
-            // New Registration
             setPetProfile(null);
-            setCurrentView('home'); // Go to PetForm
+            setCurrentView('home');
         } else {
-            // Existing User Login
             const pet = await getPetForUser(result.user.username);
             if (pet) {
                 setPetProfile(pet);
                 setCurrentView('info');
             } else {
-                // User exists but no pet data yet (rare edge case)
                 setPetProfile(null);
                 setCurrentView('home');
             }
@@ -189,7 +181,6 @@ const App: React.FC = () => {
     setPetProfile(null);
     localStorage.removeItem('matrixc_user_session');
     
-    // If there is a QR code in URL, reload page to re-trigger the check logic
     if (qrCode) {
         window.location.reload();
     } else {
@@ -250,7 +241,7 @@ const App: React.FC = () => {
   // --- RENDER LOGIN ---
   if (!user) {
     return (
-        <div className="min-h-screen font-sans bg-slate-100 dark:bg-matrix-950 transition-colors duration-300">
+        <div className="min-h-screen font-sans bg-slate-50 dark:bg-matrix-950 transition-colors duration-300">
              {updateAvailable && (
                 <div onClick={reloadApp} className="fixed top-0 left-0 right-0 bg-matrix-600 text-white p-3 text-center text-sm font-bold cursor-pointer z-[100] animate-in slide-in-from-top flex items-center justify-center gap-2 shadow-lg">
                     <RefreshCw size={18} className="animate-spin-slow" />
@@ -274,7 +265,7 @@ const App: React.FC = () => {
   const isAboutActive = currentView === 'about';
 
   return (
-    <div className="min-h-screen font-sans flex flex-col bg-slate-100 dark:bg-matrix-950 transition-colors duration-300">
+    <div className="min-h-screen font-sans flex flex-col bg-slate-50 dark:bg-matrix-950 transition-colors duration-300">
       
       {updateAvailable && (
           <div onClick={reloadApp} className="fixed top-4 left-4 right-4 bg-matrix-600 dark:bg-matrix-500 text-white p-4 rounded-xl shadow-2xl z-[100] flex items-center justify-between cursor-pointer animate-in slide-in-from-top duration-500 border border-white/20">
@@ -333,58 +324,70 @@ const App: React.FC = () => {
         )}
       </div>
 
-      {/* Bottom Navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-white/95 dark:bg-matrix-950/90 backdrop-blur-md border-t border-slate-200 dark:border-gray-800 pb-safe z-50 transition-colors duration-300">
-        <div className="grid grid-cols-5 h-16">
+      {/* Bottom Navigation - MODERN FLOATING STYLE */}
+      <nav className="fixed bottom-6 left-4 right-4 bg-white/90 dark:bg-matrix-900/90 backdrop-blur-lg border border-white/20 dark:border-white/5 rounded-3xl shadow-2xl shadow-slate-200/50 dark:shadow-black/50 z-50 transition-all duration-300 pb-1">
+        <div className="grid grid-cols-5 h-16 items-center">
             
             {!petProfile ? (
                 <button 
                     onClick={() => changeView('home')}
-                    className={`flex flex-col items-center gap-1 h-full justify-center transition-colors ${isHomeActive ? 'text-matrix-600 dark:text-matrix-500' : 'text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300'}`}
+                    className={`flex flex-col items-center gap-1.5 transition-all duration-300 relative ${isHomeActive ? 'text-matrix-600 dark:text-matrix-400 -translate-y-1' : 'text-slate-400 dark:text-slate-500 hover:text-slate-600'}`}
                 >
-                    <PlusCircle size={22} strokeWidth={isHomeActive ? 2.5 : 2} />
-                    <span className="text-[10px] font-medium">Kayıt</span>
+                    <div className={`p-1.5 rounded-xl ${isHomeActive ? 'bg-matrix-50 dark:bg-matrix-900' : ''}`}>
+                        <PlusCircle size={24} strokeWidth={isHomeActive ? 2.5 : 2} />
+                    </div>
+                    <span className={`text-[9px] font-bold ${isHomeActive ? 'opacity-100' : 'opacity-70'}`}>Kayıt</span>
                 </button>
             ) : (
                 <button 
                     onClick={() => changeView('info')}
-                    className={`flex flex-col items-center gap-1 h-full justify-center transition-colors ${isInfoActive ? 'text-matrix-600 dark:text-matrix-500' : 'text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300'}`}
+                    className={`flex flex-col items-center gap-1.5 transition-all duration-300 relative ${isInfoActive ? 'text-matrix-600 dark:text-matrix-400 -translate-y-1' : 'text-slate-400 dark:text-slate-500 hover:text-slate-600'}`}
                 >
-                    <FileText size={22} strokeWidth={isInfoActive ? 2.5 : 2} />
-                    <span className="text-[10px] font-medium">Bilgiler</span>
+                    <div className={`p-1.5 rounded-xl ${isInfoActive ? 'bg-matrix-50 dark:bg-matrix-900' : ''}`}>
+                        <FileText size={24} strokeWidth={isInfoActive ? 2.5 : 2} />
+                    </div>
+                    <span className={`text-[9px] font-bold ${isInfoActive ? 'opacity-100' : 'opacity-70'}`}>Bilgiler</span>
                 </button>
             )}
 
             <button 
                  onClick={() => petProfile ? changeView('lost') : alert("Önce hayvan kaydı yapmalısınız.")}
-                 className={`flex flex-col items-center gap-1 h-full justify-center transition-colors ${isLostActive ? 'text-red-500' : 'text-gray-400 dark:text-gray-500 hover:text-red-500'}`}
+                 className={`flex flex-col items-center gap-1.5 transition-all duration-300 relative ${isLostActive ? 'text-red-600 dark:text-red-500 -translate-y-1' : 'text-slate-400 dark:text-slate-500 hover:text-red-500'}`}
             >
-                <Siren size={22} strokeWidth={isLostActive ? 2.5 : 2} className={petProfile?.lostStatus?.isActive ? "animate-pulse text-red-500" : ""} />
-                <span className={`text-[10px] font-medium ${petProfile?.lostStatus?.isActive ? "text-red-500" : ""}`}>Kayıp</span>
+                <div className={`p-1.5 rounded-xl ${isLostActive ? 'bg-red-50 dark:bg-red-900/30' : ''}`}>
+                    <Siren size={24} strokeWidth={isLostActive ? 2.5 : 2} className={petProfile?.lostStatus?.isActive ? "animate-pulse" : ""} />
+                </div>
+                <span className={`text-[9px] font-bold ${petProfile?.lostStatus?.isActive ? "text-red-600" : ""}`}>Kayıp</span>
             </button>
             
             <button 
                 onClick={() => changeView('settings')}
-                className={`flex flex-col items-center gap-1 h-full justify-center transition-all ${isSettingsActive ? 'text-matrix-600 dark:text-matrix-500' : 'text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300'}`}
+                className={`flex flex-col items-center gap-1.5 transition-all duration-300 relative ${isSettingsActive ? 'text-matrix-600 dark:text-matrix-400 -translate-y-1' : 'text-slate-400 dark:text-slate-500 hover:text-slate-600'}`}
             >
-                <SettingsIcon size={22} strokeWidth={isSettingsActive ? 2.5 : 2} />
-                <span className="text-[10px] font-medium">Ayarlar</span>
+                <div className={`p-1.5 rounded-xl ${isSettingsActive ? 'bg-matrix-50 dark:bg-matrix-900' : ''}`}>
+                    <SettingsIcon size={24} strokeWidth={isSettingsActive ? 2.5 : 2} />
+                </div>
+                <span className={`text-[9px] font-bold ${isSettingsActive ? 'opacity-100' : 'opacity-70'}`}>Ayarlar</span>
             </button>
 
             <button 
                 onClick={() => changeView('about')}
-                className={`flex flex-col items-center gap-1 h-full justify-center transition-all ${isAboutActive ? 'text-matrix-600 dark:text-matrix-500' : 'text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300'}`}
+                className={`flex flex-col items-center gap-1.5 transition-all duration-300 relative ${isAboutActive ? 'text-matrix-600 dark:text-matrix-400 -translate-y-1' : 'text-slate-400 dark:text-slate-500 hover:text-slate-600'}`}
             >
-                <Info size={22} strokeWidth={isAboutActive ? 2.5 : 2} />
-                <span className="text-[10px] font-medium">Hakkında</span>
+                 <div className={`p-1.5 rounded-xl ${isAboutActive ? 'bg-matrix-50 dark:bg-matrix-900' : ''}`}>
+                    <Info size={24} strokeWidth={isAboutActive ? 2.5 : 2} />
+                </div>
+                <span className={`text-[9px] font-bold ${isAboutActive ? 'opacity-100' : 'opacity-70'}`}>Hakkında</span>
             </button>
 
             <button 
                 onClick={handleLogout}
-                className="flex flex-col items-center gap-1 h-full justify-center text-red-500/70 hover:text-red-500 dark:text-red-400/70 dark:hover:text-red-400 transition-colors"
+                className="flex flex-col items-center gap-1.5 transition-all duration-300 text-slate-300 hover:text-red-500 dark:text-slate-600 dark:hover:text-red-400"
             >
-                <LogOut size={22} strokeWidth={2} />
-                <span className="text-[10px] font-medium">Çıkış</span>
+                <div className="p-1.5">
+                    <LogOut size={24} strokeWidth={2} />
+                </div>
+                <span className="text-[9px] font-bold">Çıkış</span>
             </button>
         </div>
       </nav>

@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Loader2, QrCode, KeyRound } from 'lucide-react';
+import { Loader2, KeyRound } from 'lucide-react';
 import { Input } from './ui/Input';
 
 interface LoginProps {
@@ -36,73 +36,91 @@ export const Login: React.FC<LoginProps> = ({ onLogin, initialUsername, qrStatus
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen p-6 bg-slate-100 dark:bg-matrix-900 transition-colors duration-300">
-      <div className="w-full max-w-sm">
-        <div className="mb-12 text-center">
-          {/* Logo Container */}
-          <div className="flex justify-center mb-6">
-            <div className="w-20 h-20 bg-white dark:bg-matrix-950 rounded-2xl shadow-xl flex items-center justify-center border border-slate-200 dark:border-matrix-800">
-                <QrCode size={40} className="text-matrix-600 dark:text-matrix-400" />
+    <div className="flex flex-col items-center justify-center min-h-screen p-6 relative overflow-hidden bg-slate-50 dark:bg-matrix-950">
+      
+      {/* Ambient Background Effect */}
+      <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-matrix-200/50 dark:bg-matrix-900/20 rounded-full blur-[100px] pointer-events-none" />
+      <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-blue-200/50 dark:bg-blue-900/20 rounded-full blur-[100px] pointer-events-none" />
+
+      <div className="w-full max-w-sm relative z-10">
+        
+        {/* Card */}
+        <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-white/50 dark:border-white/10 shadow-2xl rounded-3xl p-8">
+            
+            {/* Header / Logo */}
+            <div className="mb-8 text-center flex flex-col items-center">
+                <div className="w-24 h-24 mb-4 drop-shadow-lg">
+                    <img 
+                        src="/logo.png" 
+                        alt="MatrixC Logo" 
+                        className="w-full h-full object-contain"
+                        onError={(e) => {
+                            e.currentTarget.style.display = 'none';
+                            // Fallback if logo fails
+                            const parent = e.currentTarget.parentElement;
+                            if(parent) parent.innerHTML = '<div class="w-20 h-20 bg-matrix-100 rounded-2xl flex items-center justify-center text-matrix-600 font-bold">Logo</div>'
+                        }}
+                    />
+                </div>
+                
+                <h1 className="text-3xl font-black text-slate-800 dark:text-white tracking-tight mb-1">
+                    MatrixC <span className="text-matrix-600">Find Me</span>
+                </h1>
+                <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">
+                    Güvenli Evcil Hayvan Takip Sistemi
+                </p>
             </div>
-          </div>
-          
-          <h1 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight">
-            MatrixC <span className="text-matrix-600 dark:text-matrix-400">Find Me</span>
-          </h1>
-          <p className="text-slate-500 dark:text-gray-400 mt-2 text-sm">
-             Etiketin üzerindeki QR ID ve PIN ile işlem yapın.
-          </p>
+
+            {/* Status Message Banner */}
+            {qrStatusMessage && (
+                <div className="mb-6 bg-blue-50 dark:bg-blue-900/30 border-l-4 border-blue-500 p-4 rounded-r-lg shadow-sm">
+                    <p className="text-blue-800 dark:text-blue-200 font-medium text-sm leading-relaxed">
+                        {qrStatusMessage}
+                    </p>
+                </div>
+            )}
+
+            <form onSubmit={handleSubmit} className="space-y-5">
+                <Input
+                    label="QR Kod ID"
+                    type="text"
+                    placeholder="Etiket üzerindeki kod (Örn: MTRX01)"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    required
+                    readOnly={!!initialUsername} 
+                    className={`font-mono text-center tracking-wider font-bold ${initialUsername ? 'bg-slate-50 text-slate-500 border-slate-200' : ''}`}
+                />
+                <Input
+                    label="Güvenlik PIN'i"
+                    type="password"
+                    placeholder="******"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    className="text-center tracking-[0.5em] font-bold text-lg"
+                    maxLength={6}
+                    rightElement={<KeyRound size={20} className="text-slate-400" />}
+                />
+
+                {error && (
+                    <div className="p-3 rounded-xl bg-red-50 dark:bg-red-500/10 border border-red-100 dark:border-red-900/50 text-red-600 dark:text-red-300 text-sm text-center font-bold">
+                        {error}
+                    </div>
+                )}
+
+                <button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full py-4 bg-gradient-to-r from-matrix-600 to-matrix-700 hover:from-matrix-500 hover:to-matrix-600 text-white font-bold rounded-xl shadow-lg shadow-matrix-500/30 dark:shadow-matrix-900/50 transition-all active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2 mt-4"
+                >
+                    {loading ? <Loader2 className="animate-spin" /> : 'Sisteme Giriş Yap'}
+                </button>
+            </form>
         </div>
 
-        {/* Status Message Banner */}
-        {qrStatusMessage && (
-             <div className="mb-6 bg-matrix-100 dark:bg-matrix-900/50 border border-matrix-200 dark:border-matrix-700 p-4 rounded-xl text-center animate-in slide-in-from-top-2">
-                 <p className="text-matrix-800 dark:text-matrix-300 font-medium text-sm">
-                     {qrStatusMessage}
-                 </p>
-             </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <Input
-            label="QR Kod ID"
-            type="text"
-            placeholder="Etiket üzerindeki kod (Örn: MTRX01)"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            required
-            readOnly={!!initialUsername} 
-            className={`bg-white dark:bg-matrix-950 ${initialUsername ? 'opacity-70 cursor-not-allowed bg-slate-50 font-mono font-bold text-center tracking-widest' : ''}`}
-          />
-          <Input
-            label="Güvenlik PIN'i"
-            type="password"
-            placeholder="****"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            className="bg-white dark:bg-matrix-950 text-center tracking-widest"
-            maxLength={6}
-            rightElement={<KeyRound size={18} className="text-slate-400" />}
-          />
-
-          {error && (
-            <div className="p-3 rounded-lg bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 text-red-600 dark:text-red-400 text-sm text-center font-medium animate-in zoom-in-95">
-              {error}
-            </div>
-          )}
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full py-3.5 bg-matrix-600 hover:bg-matrix-500 text-white font-semibold rounded-xl shadow-lg shadow-matrix-900/20 dark:shadow-matrix-900/50 transition-all active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-          >
-            {loading ? <Loader2 className="animate-spin" /> : 'Doğrula ve Devam Et'}
-          </button>
-        </form>
-
-        <p className="mt-8 text-center text-[10px] text-slate-400 dark:text-gray-600">
-          Güvenli QR Altyapısı • v2.1.0
+        <p className="mt-8 text-center text-[11px] font-medium text-slate-400 dark:text-slate-600 uppercase tracking-widest opacity-60">
+          Secure QR Infrastructure • v2.1.0
         </p>
       </div>
     </div>

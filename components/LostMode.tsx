@@ -5,10 +5,8 @@ import { Siren, MapPin, Save, Info, Lock, Unlock, Hand, ShieldCheck, KeyRound, C
 import { Input } from './ui/Input';
 import L from 'leaflet';
 
-// Leaflet Icon Setup - fixed for TypeScript without needing @ts-ignore
 const setupLeafletIcons = () => {
   try {
-    // Cast to any to access the private property _getIconUrl safely
     const markerPrototype = L.Marker.prototype as any;
     delete markerPrototype._getIconUrl;
     
@@ -36,24 +34,16 @@ interface LostModeProps {
 }
 
 export const LostMode: React.FC<LostModeProps> = ({ user, pet, onSavePet, setHasUnsavedChanges }) => {
-  // Local state initialized from prop
   const [isActive, setIsActive] = useState(pet.lostStatus?.isActive || false);
   const [message, setMessage] = useState(pet.lostStatus?.message || '');
   const [location, setLocation] = useState<{lat: number, lng: number} | undefined>(
     pet.lostStatus?.lastSeenLocation
   );
   
-  // Local dirty state for UI rendering
   const [localHasChanges, setLocalHasChanges] = useState(false);
-
-  // Security State
   const [password, setPassword] = useState('');
   const [passError, setPassError] = useState('');
-
-  // UX State: Map Interaction Lock
   const [isMapInteractive, setIsMapInteractive] = useState(false);
-  
-  // Modal state
   const [showActiveModal, setShowActiveModal] = useState(false);
   const [showSafeModal, setShowSafeModal] = useState(false);
   
@@ -61,7 +51,6 @@ export const LostMode: React.FC<LostModeProps> = ({ user, pet, onSavePet, setHas
   const leafletMap = useRef<L.Map | null>(null);
   const markerRef = useRef<L.Marker | null>(null);
 
-  // Dirty State Logic
   useEffect(() => {
     const savedActive = pet.lostStatus?.isActive || false;
     const savedMessage = pet.lostStatus?.message || '';
@@ -70,7 +59,6 @@ export const LostMode: React.FC<LostModeProps> = ({ user, pet, onSavePet, setHas
     const currentLat = location?.lat;
     const currentLng = location?.lng;
 
-    // Deep comparison for location
     const locationChanged = (savedLat !== currentLat) || (savedLng !== currentLng);
     
     const isDirty = 
@@ -83,15 +71,12 @@ export const LostMode: React.FC<LostModeProps> = ({ user, pet, onSavePet, setHas
   }, [isActive, message, location, pet.lostStatus, setHasUnsavedChanges]);
 
 
-  // 1. Effect: Initialize Map (Only when isActive is TRUE)
   useEffect(() => {
     if (isActive && mapRef.current && !leafletMap.current) {
-        // Default center
         const initialLat = location?.lat || 39.9334;
         const initialLng = location?.lng || 32.8597;
         const initialZoom = location ? 15 : 6;
 
-        // Initialize map
         leafletMap.current = L.map(mapRef.current, {
             dragging: false,
             touchZoom: false,
@@ -104,27 +89,21 @@ export const LostMode: React.FC<LostModeProps> = ({ user, pet, onSavePet, setHas
             attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         }).addTo(leafletMap.current);
 
-        // Click listener
         leafletMap.current.on('click', (e) => {
             const { lat, lng } = e.latlng;
             setLocation({ lat, lng });
         });
 
-        // Fix map size
         setTimeout(() => {
             leafletMap.current?.invalidateSize();
         }, 200);
     } else if (!isActive && leafletMap.current) {
-         // If turned off, remove map
          leafletMap.current.remove();
          leafletMap.current = null;
          markerRef.current = null;
     }
-
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isActive]);
 
-  // 2. Effect: Handle Marker & View Updates
   useEffect(() => {
       if (!location || !leafletMap.current) return;
 
@@ -146,7 +125,6 @@ export const LostMode: React.FC<LostModeProps> = ({ user, pet, onSavePet, setHas
      }
   }, [location]);
 
-  // 3. Effect: Handle Map Interaction Lock
   useEffect(() => {
     if (leafletMap.current) {
         if (isMapInteractive) {
@@ -166,11 +144,9 @@ export const LostMode: React.FC<LostModeProps> = ({ user, pet, onSavePet, setHas
   const toggleStatus = (newState: boolean) => {
     setIsActive(newState);
     if (newState) {
-        // Turning ON: Try to get location
         getUserLocation();
-        setPassword(''); // Reset pass if toggling back on
+        setPassword(''); 
     } else {
-        // Turning OFF: Reset map interactions, UI will show password input
         setIsMapInteractive(false);
     }
   };
@@ -197,68 +173,49 @@ export const LostMode: React.FC<LostModeProps> = ({ user, pet, onSavePet, setHas
     setPassError('');
 
     if (isActive) {
-        // --- SAVING AS LOST ---
         const status: LostStatus = {
             isActive: true,
             lostDate: pet.lostStatus?.lostDate || new Date().toISOString(),
             lastSeenLocation: location,
             message: message
         };
-
         const updatedPet = { ...pet, lostStatus: status };
-        
-        // Update Prop
         onSavePet(updatedPet);
-        
-        // Explicitly clear dirty state since we saved
         setHasUnsavedChanges(false);
         setLocalHasChanges(false);
-        
         setShowActiveModal(true);
-
     } else {
-        // --- SAVING AS SAFE (REQUIRES PASSWORD) ---
-        
-        // 1. Verify Password
         const actualPass = user.password || "1234";
         if (password !== actualPass) {
             setPassError("Şifre hatalı. Kayıp durumunu kapatmak için giriş şifrenizi girmelisiniz.");
             return;
         }
-
-        // 2. Prepare Data (Clean State)
         const status: LostStatus = {
             isActive: false,
             lostDate: undefined,
             lastSeenLocation: undefined,
             message: ''
         };
-
         const updatedPet = { ...pet, lostStatus: status };
-        
-        // Update Prop
         onSavePet(updatedPet);
-
         setMessage('');
         setLocation(undefined);
         setHasUnsavedChanges(false);
         setLocalHasChanges(false);
-
         setShowSafeModal(true);
     }
   };
 
   return (
-    <div className="pb-32 bg-slate-50 dark:bg-slate-950 min-h-screen">
+    <div className="pb-40 bg-slate-50 dark:bg-matrix-950 min-h-screen">
       
       {/* 1. DYNAMIC HEADER */}
       <div className={`
-          relative w-full pb-10 pt-8 px-6 rounded-b-[2.5rem] shadow-xl overflow-hidden transition-all duration-500
+          relative w-full pb-10 pt-8 px-6 rounded-b-[3rem] shadow-xl overflow-hidden transition-all duration-500
           ${isActive 
             ? 'bg-gradient-to-br from-red-600 via-red-700 to-rose-800' 
             : 'bg-gradient-to-br from-emerald-500 via-teal-600 to-emerald-700'}
       `}>
-          {/* Background Decorations */}
           <div className="absolute top-0 right-0 w-64 h-64 bg-white opacity-5 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl"></div>
           <div className="absolute bottom-0 left-0 w-48 h-48 bg-black opacity-10 rounded-full translate-y-1/2 -translate-x-1/2 blur-2xl"></div>
 
@@ -274,14 +231,14 @@ export const LostMode: React.FC<LostModeProps> = ({ user, pet, onSavePet, setHas
                   <h2 className="text-3xl font-black text-white tracking-tight uppercase">
                       {isActive ? 'Kayıp Modu Aktif!' : 'Durum: Güvende'}
                   </h2>
-                  <p className="text-white/80 text-sm font-medium mt-1 max-w-xs mx-auto">
+                  <p className="text-white/80 text-sm font-medium mt-1 max-w-xs mx-auto leading-tight">
                       {isActive 
                           ? 'Acil durum sinyali yayılıyor. Konum ve mesajınız herkese açık.' 
-                          : 'Dostumuz yanınızda ve güvende. Herhangi bir tehlike yok.'}
+                          : 'Dostumuz yanınızda ve güvende.'}
                   </p>
               </div>
 
-              {/* TOGGLE SWITCH (Large Interaction Area) */}
+              {/* TOGGLE SWITCH */}
               <div className="mt-4">
                   <button
                       onClick={() => toggleStatus(!isActive)}
@@ -290,10 +247,10 @@ export const LostMode: React.FC<LostModeProps> = ({ user, pet, onSavePet, setHas
                           ${isActive ? 'bg-red-900/40 border border-red-400/30' : 'bg-emerald-900/30 border border-emerald-400/30'}
                       `}
                   >
-                      <span className={`absolute left-0 w-full text-center text-xs font-bold tracking-widest uppercase transition-opacity duration-300 ${isActive ? 'opacity-0' : 'text-white/70 opacity-100'}`}>
+                      <span className={`absolute left-0 w-full text-center text-[10px] font-bold tracking-[0.2em] uppercase transition-opacity duration-300 ${isActive ? 'opacity-0' : 'text-white/70 opacity-100'}`}>
                           Kaydır &rarr; Aktif Et
                       </span>
-                       <span className={`absolute left-0 w-full text-center text-xs font-bold tracking-widest uppercase transition-opacity duration-300 ${isActive ? 'text-white/70 opacity-100' : 'opacity-0'}`}>
+                       <span className={`absolute left-0 w-full text-center text-[10px] font-bold tracking-[0.2em] uppercase transition-opacity duration-300 ${isActive ? 'text-white/70 opacity-100' : 'opacity-0'}`}>
                           Kapatmak İçin &larr;
                       </span>
 
@@ -310,24 +267,14 @@ export const LostMode: React.FC<LostModeProps> = ({ user, pet, onSavePet, setHas
           </div>
       </div>
 
-      <div className="px-4 -mt-6 relative z-20 max-w-lg mx-auto space-y-6">
+      <div className="px-4 -mt-8 relative z-20 max-w-lg mx-auto space-y-6">
 
           {/* --- ACTIVE (LOST) FORM AREA --- */}
           {isActive && (
               <div className="animate-in slide-in-from-bottom-4 fade-in duration-500 space-y-6">
                   
-                  {/* Info Card */}
-                  <div className="bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/30 p-4 rounded-2xl flex gap-3 items-start shadow-sm">
-                      <div className="bg-red-100 dark:bg-red-800/30 p-2 rounded-full shrink-0">
-                        <Radar className="text-red-600 dark:text-red-400" size={20} />
-                      </div>
-                      <p className="text-sm text-red-800 dark:text-red-200 mt-1">
-                          Aşağıdaki bilgileri doldurup <strong>Bildirimi Güncelle</strong> butonuna basarak QR kod okutulduğunda görünecek verileri güncelleyin.
-                      </p>
-                  </div>
-
                   {/* Map Section */}
-                  <div className="bg-white dark:bg-slate-800 rounded-3xl p-1 shadow-lg border border-slate-200 dark:border-slate-700">
+                  <div className="bg-white dark:bg-slate-900 rounded-3xl p-1 shadow-xl border border-slate-200 dark:border-slate-800">
                       <div className="px-5 py-4 flex justify-between items-center">
                           <label className="flex items-center gap-2 text-sm font-bold text-slate-700 dark:text-gray-200">
                               <MapPin className="text-red-500" size={18} />
@@ -335,16 +282,15 @@ export const LostMode: React.FC<LostModeProps> = ({ user, pet, onSavePet, setHas
                           </label>
                           <button 
                             onClick={getUserLocation}
-                            className="text-xs flex items-center gap-1 bg-red-50 text-red-600 px-3 py-1.5 rounded-full hover:bg-red-100 dark:bg-red-900/20 dark:text-red-300 transition-colors font-semibold"
+                            className="text-xs flex items-center gap-1 bg-red-50 text-red-600 px-3 py-1.5 rounded-full hover:bg-red-100 dark:bg-red-900/20 dark:text-red-300 transition-colors font-bold"
                           >
                               <Navigation size={12} /> Konumumu Al
                           </button>
                       </div>
                       
-                      <div className="relative w-full h-72 rounded-2xl overflow-hidden bg-slate-100 dark:bg-slate-900 touch-none">
+                      <div className="relative w-full h-72 rounded-2xl overflow-hidden bg-slate-100 dark:bg-slate-800 touch-none">
                           <div id="map" ref={mapRef} className="w-full h-full z-10" />
                           
-                          {/* Map Overlay Controls */}
                           {!isMapInteractive && (
                               <div className="absolute inset-0 z-[50] bg-slate-900/20 backdrop-blur-[2px] flex flex-col items-center justify-center transition-opacity">
                                   <button 
@@ -368,8 +314,8 @@ export const LostMode: React.FC<LostModeProps> = ({ user, pet, onSavePet, setHas
 
                       {location && (
                          <div className="px-5 py-3 bg-slate-50 dark:bg-slate-800/50 rounded-b-3xl flex justify-between items-center">
-                             <p className="text-[10px] text-slate-400 font-mono tracking-wide">
-                                 KOORDİNAT: {location.lat.toFixed(6)}, {location.lng.toFixed(6)}
+                             <p className="text-[10px] text-slate-400 font-mono tracking-wide font-bold">
+                                 {location.lat.toFixed(5)}, {location.lng.toFixed(5)}
                              </p>
                              <div className="flex items-center gap-1 text-[10px] font-bold text-slate-400">
                                  {isMapInteractive ? <Unlock size={10} /> : <Lock size={10} />}
@@ -380,13 +326,13 @@ export const LostMode: React.FC<LostModeProps> = ({ user, pet, onSavePet, setHas
                   </div>
 
                   {/* Note Section */}
-                  <div className="bg-white dark:bg-slate-800 p-5 rounded-3xl shadow-lg border border-slate-200 dark:border-slate-700">
+                  <div className="bg-white dark:bg-slate-900 p-5 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-800">
                       <label className="block text-sm font-bold text-slate-700 dark:text-gray-200 mb-3 flex items-center gap-2">
-                          <Info size={18} className="text-blue-500" />
+                          <Info size={18} className="text-matrix-600 dark:text-matrix-400" />
                           Bulan Kişi İçin Not
                       </label>
                       <textarea 
-                        className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl p-4 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-red-500/50 min-h-[120px] resize-none leading-relaxed"
+                        className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-4 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-red-500/50 min-h-[120px] resize-none leading-relaxed font-medium placeholder-slate-400"
                         placeholder="Örn: İsmi Pamuk. Sol arka ayağı aksıyor, ürkek davranabilir. Lütfen yaklaşırken adıyla seslenin..."
                         value={message}
                         onChange={(e) => setMessage(e.target.value)}
@@ -397,16 +343,15 @@ export const LostMode: React.FC<LostModeProps> = ({ user, pet, onSavePet, setHas
 
           {/* --- SAFE VERIFICATION FORM AREA --- */}
           {!isActive && pet.lostStatus?.isActive && (
-             <div className="bg-white dark:bg-slate-800 p-6 rounded-3xl border-2 border-green-100 dark:border-green-900/50 shadow-xl animate-in zoom-in-95 duration-300 relative overflow-hidden">
-                {/* Decorative BG */}
+             <div className="bg-white dark:bg-slate-900 p-8 rounded-3xl border-2 border-green-100 dark:border-green-900/50 shadow-xl animate-in zoom-in-95 duration-300 relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-32 h-32 bg-green-500/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2"></div>
                 
                 <div className="flex flex-col items-center mb-6 text-center relative z-10">
-                    <div className="bg-green-100 dark:bg-green-900/30 p-3 rounded-full mb-3 text-green-600 dark:text-green-400">
+                    <div className="bg-green-100 dark:bg-green-900/30 p-4 rounded-full mb-3 text-green-600 dark:text-green-400 shadow-sm">
                         <KeyRound size={32} />
                     </div>
-                    <h3 className="text-lg font-bold text-slate-900 dark:text-white">Güvenlik Kontrolü</h3>
-                    <p className="text-sm text-slate-500 dark:text-gray-400 mt-1 max-w-[200px]">
+                    <h3 className="text-xl font-black text-slate-900 dark:text-white">Güvenlik Kontrolü</h3>
+                    <p className="text-sm font-medium text-slate-500 dark:text-gray-400 mt-1 max-w-[200px]">
                         Alarmı kapatmak için lütfen giriş şifrenizi doğrulayın.
                     </p>
                 </div>
@@ -414,24 +359,24 @@ export const LostMode: React.FC<LostModeProps> = ({ user, pet, onSavePet, setHas
                 <div className="space-y-4 relative z-10">
                     <Input
                         type="password"
-                        placeholder="Hesap Şifresi"
+                        placeholder="******"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         error={passError}
-                        className="!bg-slate-50 dark:!bg-slate-900 text-center tracking-widest font-bold"
+                        className="!bg-slate-50 dark:!bg-slate-800 text-center tracking-widest font-bold text-lg"
                     />
                 </div>
              </div>
           )}
           
-          {/* Dynamic Save Button - ONLY SHOW IF CHANGES EXIST */}
+          {/* Dynamic Save Button */}
           {localHasChanges && (
-              <div className="fixed bottom-20 left-4 right-4 z-40 animate-in slide-in-from-bottom-2 fade-in">
+              <div className="fixed bottom-24 left-4 right-4 z-40 animate-in slide-in-from-bottom-2 fade-in">
                  <button 
                     onClick={handleSave}
                     disabled={!isActive && !password && pet.lostStatus?.isActive}
                     className={`
-                        w-full py-4 rounded-2xl shadow-2xl flex items-center justify-center gap-3 active:scale-95 transition-all font-bold text-white text-lg
+                        w-full py-4 rounded-2xl shadow-2xl flex items-center justify-center gap-3 active:scale-95 transition-all font-black text-white text-lg
                         disabled:opacity-50 disabled:cursor-not-allowed
                         ${isActive 
                             ? 'bg-gradient-to-r from-red-600 to-rose-600 shadow-red-500/40' 
@@ -448,7 +393,7 @@ export const LostMode: React.FC<LostModeProps> = ({ user, pet, onSavePet, setHas
 
       {/* --- MODAL 1: LOST ACTIVATED --- */}
       {showActiveModal && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/95 backdrop-blur-sm animate-in fade-in duration-300">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm animate-in fade-in duration-300">
             <div className="bg-white dark:bg-slate-900 w-full max-w-sm rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300 border border-slate-200 dark:border-slate-800">
                  <div className="bg-red-500 h-2 w-full"></div>
                  <div className="p-6">
@@ -456,32 +401,21 @@ export const LostMode: React.FC<LostModeProps> = ({ user, pet, onSavePet, setHas
                         <Siren size={32} className="animate-pulse" />
                      </div>
                      
-                     <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-4 text-center">
+                     <h3 className="text-xl font-black text-slate-900 dark:text-white mb-2 text-center">
                          Kayıp Bildirimi Yayınlandı
                      </h3>
                      
-                     <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-100 dark:border-slate-800 mb-4">
-                        <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed text-center">
-                            <span className="font-bold text-black dark:text-white">{pet.name.value}</span> için acil durum kaydı oluşturuldu.
+                     <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-100 dark:border-slate-800 mb-4 text-center">
+                        <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed font-medium">
+                            <span className="font-bold text-black dark:text-white">{pet.name.value}</span> için acil durum kaydı oluşturuldu. QR kod tarandığında alarm verilecek.
                         </p>
-                     </div>
-
-                     <div className="space-y-3 text-xs text-slate-600 dark:text-slate-400">
-                        <div className="flex gap-3 items-start">
-                            <CheckCircle2 size={16} className="text-red-500 shrink-0 mt-0.5" />
-                            <p>QR kod okutulduğunda "Kayıp" uyarısı ve iletişim bilgileri gösterilecek.</p>
-                        </div>
-                        <div className="flex gap-3 items-start">
-                             <CheckCircle2 size={16} className="text-red-500 shrink-0 mt-0.5" />
-                             <p>İletişim bilgilerinizin ve 2. şahıs numarasının güncel olduğundan emin olun.</p>
-                        </div>
                      </div>
 
                      <button 
                         onClick={() => setShowActiveModal(false)}
-                        className="w-full mt-6 bg-red-600 hover:bg-red-700 text-white py-4 rounded-xl font-bold text-sm shadow-lg shadow-red-500/20 active:scale-95 transition-all"
+                        className="w-full mt-2 bg-red-600 hover:bg-red-700 text-white py-4 rounded-xl font-bold text-sm shadow-lg shadow-red-500/20 active:scale-95 transition-all"
                      >
-                        Tamam, Anlaşıldı
+                        Tamam
                      </button>
                  </div>
             </div>
@@ -490,7 +424,7 @@ export const LostMode: React.FC<LostModeProps> = ({ user, pet, onSavePet, setHas
 
       {/* --- MODAL 2: SAFE CONFIRMED --- */}
       {showSafeModal && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/95 backdrop-blur-sm animate-in fade-in duration-300">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm animate-in fade-in duration-300">
             <div className="bg-white dark:bg-slate-900 w-full max-w-sm rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300 border border-slate-200 dark:border-slate-800">
                  <div className="bg-emerald-500 h-2 w-full"></div>
                  <div className="p-6">
@@ -498,23 +432,16 @@ export const LostMode: React.FC<LostModeProps> = ({ user, pet, onSavePet, setHas
                         <CheckCircle2 size={36} />
                      </div>
                      
-                     <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2 text-center">
+                     <h3 className="text-xl font-black text-slate-900 dark:text-white mb-2 text-center">
                          Tehlike Geçti!
                      </h3>
-                     <p className="text-center text-slate-500 dark:text-gray-400 mb-6 text-sm">
-                         Dostumuzun güvende olmasına çok sevindik.
+                     <p className="text-center text-slate-500 dark:text-gray-400 mb-6 text-sm font-medium">
+                         Dostumuzun güvende olmasına sevindik. Sistem normale döndü.
                      </p>
-                     
-                     <div className="bg-emerald-50 dark:bg-emerald-900/10 p-4 rounded-xl border border-emerald-100 dark:border-emerald-800 mb-4 flex gap-3 items-center">
-                        <ShieldCheck className="text-emerald-600 dark:text-emerald-400 shrink-0" size={20} />
-                        <p className="text-xs text-emerald-800 dark:text-emerald-200 font-medium">
-                            Kayıp ilanı başarıyla kaldırıldı. Sistem normale döndü.
-                        </p>
-                     </div>
 
                      <button 
                         onClick={() => setShowSafeModal(false)}
-                        className="w-full mt-2 bg-emerald-600 hover:bg-emerald-700 text-white py-4 rounded-xl font-bold text-sm shadow-lg shadow-emerald-500/20 active:scale-95 transition-all"
+                        className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-4 rounded-xl font-bold text-sm shadow-lg shadow-emerald-500/20 active:scale-95 transition-all"
                      >
                         Ana Sayfaya Dön
                      </button>

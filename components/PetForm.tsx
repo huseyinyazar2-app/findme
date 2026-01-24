@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { UserProfile, PetProfile, PetType } from '../types';
 import { TURKEY_CITIES, CITY_NAMES, TEMPERAMENT_OPTIONS, formatPhoneNumber } from '../constants';
@@ -37,22 +38,19 @@ export const PetForm: React.FC<PetFormProps> = ({ user, onUpdateUser, initialPet
   
   useEffect(() => {
     if (initialPetData) {
-        // Check if the loaded type is one of the standard enums
         const isStandardType = Object.values(PetType).includes(initialPetData.type as PetType);
 
         if (isStandardType) {
              setPetData(initialPetData);
-             setCustomPetType(''); // Reset custom input if standard
+             setCustomPetType(''); 
         } else {
-             // It's a custom type (e.g. "Kuş", "Hamster")
              setPetData({
                 ...initialPetData,
-                type: PetType.OTHER // Visually select "Other"
+                type: PetType.OTHER 
              });
-             setCustomPetType(initialPetData.type); // Fill the input box
+             setCustomPetType(initialPetData.type); 
         }
         
-        // Check custom temperament
         if (initialPetData.temperament?.value && !TEMPERAMENT_OPTIONS.includes(initialPetData.temperament.value)) {
             setIsCustomTemperament(true);
         }
@@ -75,14 +73,12 @@ export const PetForm: React.FC<PetFormProps> = ({ user, onUpdateUser, initialPet
 
     setPetData(prev => {
         const currentField = prev[key];
-        // Check if currentField is a PrivacyField object (has 'value' and 'isPublic')
         if (currentField && typeof currentField === 'object' && 'value' in currentField) {
             return {
                 ...prev,
                 [key]: { ...currentField, [fieldKey]: value }
             };
         }
-        // If it's a primitive (like microchip string), we just update it directly
         return { ...prev, [key]: value };
     });
   };
@@ -164,10 +160,7 @@ export const PetForm: React.FC<PetFormProps> = ({ user, onUpdateUser, initialPet
       return;
     }
 
-    // Prepare data for saving
     const finalData = { ...petData };
-
-    // FIX: If "Other" is selected, overwrite the 'type' field with the custom input text
     if (petData.type === PetType.OTHER) {
         finalData.type = customPetType;
     }
@@ -184,30 +177,35 @@ export const PetForm: React.FC<PetFormProps> = ({ user, onUpdateUser, initialPet
     : ["Diğer"];
 
   return (
-    <div className="pb-24 pt-6">
-      <div className="px-4 mb-6">
-        <div className="flex items-center gap-2 mb-1">
-            <ShieldCheck className="text-matrix-600 dark:text-matrix-500" size={28} />
-            <h2 className="text-2xl font-bold text-slate-900 dark:text-white tracking-wide">
-                {isEditMode ? 'Profil Bilgileri' : 'Evcil Hayvan Kaydı'}
-            </h2>
+    <div className="pb-32 pt-8">
+      <div className="px-6 mb-8">
+        <div className="flex items-center gap-3 mb-2">
+            <div className="w-12 h-12 bg-white dark:bg-slate-800 rounded-2xl flex items-center justify-center shadow-md border border-slate-100 dark:border-slate-700 text-matrix-600 dark:text-matrix-400">
+                <ShieldCheck size={28} />
+            </div>
+            <div>
+                <h2 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">
+                    {isEditMode ? 'Bilgileri Güncelle' : 'Hayvan Kaydı'}
+                </h2>
+                <p className="text-sm font-medium text-slate-500 dark:text-gray-400">
+                    {isEditMode ? 'Profil bilgilerini yönetin' : 'Yeni bir profil oluşturun'}
+                </p>
+            </div>
         </div>
-        <p className="text-slate-500 dark:text-gray-400 text-sm">
-            {isEditMode 
-                ? 'Bilgileri güncel tutmak güvenli kavuşma için çok önemlidir.'
-                : 'Olası bir kayıp durumunda hızlı müdahale için bilgilerini şimdiden kaydedelim.'}
-        </p>
       </div>
 
       <form onSubmit={handleSubmit} className="px-4 space-y-6 max-w-lg mx-auto">
         
         {/* --- Section 1: Owner Info --- */}
-        <section className="space-y-3">
-            <div className="flex items-center gap-2 text-matrix-600 dark:text-matrix-400">
-                <UserCheck size={18} />
-                <h3 className="font-semibold text-base">Sahip Bilgileri</h3>
-            </div>
-            <div className="bg-white dark:bg-dark-surface/50 p-5 rounded-2xl border border-slate-200 dark:border-gray-800/60 backdrop-blur-sm space-y-4 shadow-sm transition-colors duration-300">
+        <section className="bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
+             <div className="bg-slate-50 dark:bg-slate-800/50 px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center gap-3">
+                 <div className="bg-blue-100 dark:bg-blue-900/30 p-1.5 rounded-lg text-blue-600 dark:text-blue-400">
+                     <UserCheck size={18} />
+                 </div>
+                 <h3 className="font-bold text-slate-700 dark:text-slate-200 text-sm tracking-wide">Sahip Bilgileri</h3>
+             </div>
+             
+             <div className="p-6 space-y-5">
                 <Input 
                     label="Adı - Soyadı"
                     placeholder="Adınız Soyadınız"
@@ -218,7 +216,7 @@ export const PetForm: React.FC<PetFormProps> = ({ user, onUpdateUser, initialPet
                     }}
                     required
                     disabled={isEditMode}
-                    className={isEditMode ? "opacity-60 cursor-not-allowed" : ""}
+                    className={isEditMode ? "opacity-60 cursor-not-allowed bg-slate-50" : ""}
                     error={errors.fullName ? "Bu alan zorunludur" : undefined}
                 />
                 <Input 
@@ -232,28 +230,31 @@ export const PetForm: React.FC<PetFormProps> = ({ user, onUpdateUser, initialPet
                     }}
                     required
                     disabled={isEditMode}
-                    className={isEditMode ? "opacity-60 cursor-not-allowed" : ""}
+                    className={isEditMode ? "opacity-60 cursor-not-allowed bg-slate-50" : ""}
                     error={errors.email ? "Bu alan zorunludur" : undefined}
                 />
-            </div>
+             </div>
         </section>
 
         {/* --- Section 2: Residence --- */}
-        <section className="space-y-3">
-            <div className="flex items-center gap-2 text-matrix-600 dark:text-matrix-400">
-                <Home size={18} />
-                <h3 className="font-semibold text-base">İkamet / Konum Bilgisi</h3>
-            </div>
-            <div className="bg-white dark:bg-dark-surface/50 p-5 rounded-2xl border border-slate-200 dark:border-gray-800/60 backdrop-blur-sm grid grid-cols-2 gap-4 shadow-sm transition-colors duration-300">
+        <section className="bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
+             <div className="bg-slate-50 dark:bg-slate-800/50 px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center gap-3">
+                 <div className="bg-orange-100 dark:bg-orange-900/30 p-1.5 rounded-lg text-orange-600 dark:text-orange-400">
+                     <Home size={18} />
+                 </div>
+                 <h3 className="font-bold text-slate-700 dark:text-slate-200 text-sm tracking-wide">Konum Bilgisi</h3>
+             </div>
+
+             <div className="p-6 grid grid-cols-2 gap-4">
                 <div>
-                    <label className="block text-xs font-medium text-slate-700 dark:text-matrix-200 mb-1">
-                        İl <span className="text-red-500 dark:text-red-400">*</span>
+                    <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1.5 uppercase ml-1">
+                        İl <span className="text-red-500">*</span>
                     </label>
                     <div className="relative">
                         <select 
                             className={`
-                                w-full bg-slate-50 dark:bg-dark-input border rounded-xl p-3 text-sm appearance-none text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-matrix-500/50 transition-all
-                                ${errors.city ? 'border-red-500/50' : 'border-slate-300 dark:border-gray-700'}
+                                w-full bg-white dark:bg-slate-800 border rounded-xl p-3.5 text-sm appearance-none text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-matrix-100 dark:focus:ring-matrix-900 focus:border-matrix-500 transition-all shadow-sm
+                                ${errors.city ? 'border-red-500' : 'border-slate-300 dark:border-slate-700'}
                             `}
                             value={user.city || ''}
                             onChange={handleCityChange}
@@ -261,19 +262,18 @@ export const PetForm: React.FC<PetFormProps> = ({ user, onUpdateUser, initialPet
                             <option value="">Seçiniz</option>
                             {CITY_NAMES.map(city => <option key={city} value={city}>{city}</option>)}
                         </select>
-                        <ChevronDown className="absolute right-3 top-3.5 text-slate-500 pointer-events-none" size={16} />
+                        <ChevronDown className="absolute right-3 top-3.5 text-slate-400 pointer-events-none" size={18} />
                     </div>
-                    {errors.city && <p className="mt-1 text-[10px] text-red-500 dark:text-red-400">Zorunlu</p>}
                 </div>
                 <div>
-                    <label className="block text-xs font-medium text-slate-700 dark:text-matrix-200 mb-1">
-                        İlçe <span className="text-red-500 dark:text-red-400">*</span>
+                    <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1.5 uppercase ml-1">
+                        İlçe <span className="text-red-500">*</span>
                     </label>
                     <div className="relative">
                         <select 
                             className={`
-                                w-full bg-slate-50 dark:bg-dark-input border rounded-xl p-3 text-sm appearance-none text-slate-900 dark:text-white disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-matrix-500/50 transition-all
-                                ${errors.district ? 'border-red-500/50' : 'border-slate-300 dark:border-gray-700'}
+                                w-full bg-white dark:bg-slate-800 border rounded-xl p-3.5 text-sm appearance-none text-slate-900 dark:text-white disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-matrix-100 dark:focus:ring-matrix-900 focus:border-matrix-500 transition-all shadow-sm
+                                ${errors.district ? 'border-red-500' : 'border-slate-300 dark:border-slate-700'}
                             `}
                             value={user.district || ''}
                             onChange={(e) => {
@@ -287,168 +287,168 @@ export const PetForm: React.FC<PetFormProps> = ({ user, onUpdateUser, initialPet
                                 <option key={dist} value={dist}>{dist}</option>
                             ))}
                         </select>
-                        <ChevronDown className="absolute right-3 top-3.5 text-slate-500 pointer-events-none" size={16} />
+                        <ChevronDown className="absolute right-3 top-3.5 text-slate-400 pointer-events-none" size={18} />
                     </div>
-                    {errors.district && <p className="mt-1 text-[10px] text-red-500 dark:text-red-400">Zorunlu</p>}
                 </div>
             </div>
         </section>
 
         {/* --- Section 3: Pet Info --- */}
         <section className="space-y-4">
-            <div className="flex items-center gap-2 text-matrix-600 dark:text-matrix-400">
-                <Dog size={18} />
-                <h3 className="font-semibold text-base">Dostumuzun Kimlik Kartı</h3>
-            </div>
-
-            {/* Part 1: Basic Identity (Light BG) */}
-            <div className="bg-white dark:bg-dark-surface/50 p-5 rounded-2xl border border-slate-200 dark:border-gray-800/60 backdrop-blur-sm space-y-6 shadow-sm transition-colors duration-300">
+            {/* Part 1: Basic Identity (Card) */}
+            <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
+                <div className="bg-slate-50 dark:bg-slate-800/50 px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center gap-3">
+                     <div className="bg-matrix-100 dark:bg-matrix-900/30 p-1.5 rounded-lg text-matrix-600 dark:text-matrix-400">
+                         <Dog size={18} />
+                     </div>
+                     <h3 className="font-bold text-slate-700 dark:text-slate-200 text-sm tracking-wide">Hayvan Kimliği</h3>
+                </div>
                 
-                {/* 1. Pet Type */}
-                <div>
-                    <label className="block text-xs font-medium text-slate-700 dark:text-matrix-200 mb-2">Türü</label>
-                    <div className="flex flex-col gap-2">
-                        <div className="flex rounded-xl bg-slate-100 dark:bg-dark-input border border-slate-300 dark:border-gray-700 p-1.5 transition-colors">
-                            {Object.values(PetType).map(type => (
-                                <button
-                                    key={type}
-                                    type="button"
-                                    onClick={() => updatePetField('type', 'value', type)}
-                                    className={`flex-1 text-sm py-2.5 rounded-lg transition-all font-medium ${petData.type === type ? 'bg-white dark:bg-gray-700 text-black dark:text-white shadow-md' : 'text-slate-500 dark:text-gray-400 hover:text-slate-800 dark:hover:text-gray-200'}`}
-                                >
-                                    {type}
-                                </button>
-                            ))}
-                        </div>
-                        {petData.type === PetType.OTHER && (
-                            <div className="animate-in slide-in-from-top-2 fade-in">
+                <div className="p-6 space-y-6">
+                    {/* Pet Type */}
+                    <div>
+                        <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-2 uppercase ml-1">Türü</label>
+                        <div className="flex flex-col gap-3">
+                            <div className="flex rounded-xl bg-slate-100 dark:bg-slate-800 p-1.5 border border-slate-200 dark:border-slate-700">
+                                {Object.values(PetType).map(type => (
+                                    <button
+                                        key={type}
+                                        type="button"
+                                        onClick={() => updatePetField('type', 'value', type)}
+                                        className={`flex-1 text-sm py-3 rounded-lg transition-all font-bold ${petData.type === type ? 'bg-white dark:bg-slate-700 text-matrix-600 dark:text-white shadow-sm ring-1 ring-black/5 dark:ring-white/10' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}
+                                    >
+                                        {type}
+                                    </button>
+                                ))}
+                            </div>
+                            {petData.type === PetType.OTHER && (
                                 <Input 
-                                    placeholder="Lütfen hayvan türünü belirtin (Örn: Kuş, Hamster)"
+                                    placeholder="Lütfen türü belirtin (Örn: Kuş)"
                                     value={customPetType}
                                     onChange={(e) => {
                                         setCustomPetType(e.target.value);
                                         setErrors(prev => ({...prev, customPetType: false}));
                                     }}
-                                    className="!mb-0"
+                                    className="!mb-0 animate-in slide-in-from-top-2"
                                     error={errors.customPetType ? "Lütfen türü belirtin" : undefined}
                                 />
-                            </div>
-                        )}
+                            )}
+                        </div>
                     </div>
-                </div>
 
-                {/* 2. Pet Name */}
-                <div>
-                    <div className="flex justify-between items-center mb-1">
-                        <label className="text-sm font-medium text-slate-700 dark:text-matrix-200">Hayvanın Adı <span className="text-red-500 dark:text-red-400">*</span></label>
-                        <PrivacyToggle 
-                            isPublic={petData.name.isPublic} 
-                            onChange={(val) => updatePetField('name', 'isPublic', val)} 
+                    {/* Pet Name */}
+                    <div>
+                        <div className="flex justify-between items-center mb-2">
+                            <label className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase ml-1">Adı <span className="text-red-500">*</span></label>
+                            <PrivacyToggle 
+                                isPublic={petData.name.isPublic} 
+                                onChange={(val) => updatePetField('name', 'isPublic', val)} 
+                            />
+                        </div>
+                        <Input 
+                            value={petData.name.value} 
+                            onChange={(e) => updatePetField('name', 'value', e.target.value)}
+                            placeholder="Örn: Pamuk"
+                            className="!mb-0 text-lg font-bold"
+                            error={errors.petName ? "Bu alan zorunludur" : undefined}
                         />
                     </div>
-                    <Input 
-                        value={petData.name.value} 
-                        onChange={(e) => updatePetField('name', 'value', e.target.value)}
-                        placeholder="Örn: Pamuk"
-                        className="!mb-0"
-                        error={errors.petName ? "Bu alan zorunludur" : undefined}
-                    />
-                </div>
 
-                {/* 3. Photo Upload */}
-                <div className="text-center">
-                    <div className="relative inline-block w-full">
-                        <label 
-                            htmlFor="pet-photo" 
-                            className={`
-                                flex flex-col items-center justify-center w-full h-48 border-2 border-dashed rounded-2xl cursor-pointer transition-all overflow-hidden relative group
-                                ${errors.photo 
-                                    ? 'border-red-500/50 bg-red-50 dark:bg-red-900/10' 
-                                    : (petData.photoUrl.value 
-                                        ? 'border-matrix-500/50 bg-black' 
-                                        : 'border-slate-300 dark:border-gray-700 hover:border-matrix-400/50 bg-slate-50 dark:bg-dark-input hover:bg-slate-100 dark:hover:bg-gray-800/50')}
-                            `}
-                        >
-                            {uploading ? (
-                                <div className="flex flex-col items-center justify-center text-matrix-600 dark:text-matrix-400">
-                                    <Loader2 className="animate-spin mb-2" size={32} />
-                                    <span className="text-sm font-medium">Yükleniyor...</span>
-                                </div>
-                            ) : petData.photoUrl.value ? (
-                                <img src={petData.photoUrl.value} alt="Pet Preview" className="w-full h-full object-contain" />
-                            ) : (
-                                <>
-                                    <div className="p-4 rounded-full bg-slate-200 dark:bg-gray-800/50 mb-3 group-hover:bg-slate-300 dark:group-hover:bg-gray-800 transition-colors">
-                                        <Camera size={32} className={errors.photo ? "text-red-500 dark:text-red-400" : "text-slate-500 dark:text-gray-500 group-hover:text-matrix-600 dark:group-hover:text-matrix-400"} />
+                    {/* Photo Upload */}
+                    <div>
+                         <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-2 uppercase ml-1">Fotoğraf <span className="text-red-500">*</span></label>
+                         <div className="relative group">
+                            <label 
+                                htmlFor="pet-photo" 
+                                className={`
+                                    flex flex-col items-center justify-center w-full aspect-[4/3] rounded-2xl cursor-pointer transition-all overflow-hidden border-2 border-dashed
+                                    ${errors.photo 
+                                        ? 'border-red-300 bg-red-50 dark:bg-red-900/10' 
+                                        : (petData.photoUrl.value 
+                                            ? 'border-matrix-500 bg-slate-900' 
+                                            : 'border-slate-300 dark:border-slate-700 hover:border-matrix-400 bg-slate-50 dark:bg-slate-800 hover:bg-white dark:hover:bg-slate-700')}
+                                `}
+                            >
+                                {uploading ? (
+                                    <div className="flex flex-col items-center gap-2 text-matrix-600 dark:text-matrix-400">
+                                        <Loader2 className="animate-spin" size={32} />
+                                        <span className="text-xs font-bold uppercase">Yükleniyor...</span>
                                     </div>
-                                    <span className={`text-sm ${errors.photo ? "text-red-500 dark:text-red-400 font-semibold" : "text-slate-500 dark:text-gray-400"}`}>
-                                        {errors.photo ? "Fotoğraf Yüklemek Zorunludur" : "Fotoğraf Yükle (Zorunlu)"}
-                                    </span>
-                                </>
-                            )}
-                            <input 
-                                id="pet-photo" 
-                                type="file" 
-                                className="hidden" 
-                                accept="image/*" 
-                                onChange={handlePhotoUpload}
-                                disabled={uploading}
-                            />
+                                ) : petData.photoUrl.value ? (
+                                    <img src={petData.photoUrl.value} alt="Pet Preview" className="w-full h-full object-contain" />
+                                ) : (
+                                    <>
+                                        <div className="p-4 rounded-full bg-slate-200 dark:bg-slate-700 mb-3 group-hover:scale-110 transition-transform">
+                                            <Camera size={28} className="text-slate-500 dark:text-slate-300" />
+                                        </div>
+                                        <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Fotoğraf Seçin</span>
+                                    </>
+                                )}
+                                <input 
+                                    id="pet-photo" 
+                                    type="file" 
+                                    className="hidden" 
+                                    accept="image/*" 
+                                    onChange={handlePhotoUpload}
+                                    disabled={uploading}
+                                />
+                            </label>
                             
-                            <div className="absolute top-2 right-2">
+                            <div className="absolute top-3 right-3">
                                 <PrivacyToggle 
                                     isPublic={petData.photoUrl.isPublic} 
                                     onChange={(val) => updatePetField('photoUrl', 'isPublic', val)} 
                                 />
                             </div>
-                        </label>
+                         </div>
                     </div>
                 </div>
             </div>
 
-            {/* Part 2: Detailed Specs (Darker BG) */}
-            <div className="bg-slate-50 dark:bg-gray-900/80 p-5 rounded-2xl border border-slate-200 dark:border-gray-800 space-y-6 shadow-md transition-colors duration-300">
-                <div className="flex items-center gap-2 text-matrix-600/80 dark:text-matrix-500/80 pb-2 border-b border-slate-300 dark:border-gray-800">
-                    <Activity size={16} />
-                    <h4 className="text-sm font-semibold uppercase tracking-wider">Detaylı Bilgiler</h4>
+            {/* Part 2: Detailed Specs (Card) */}
+            <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
+                <div className="bg-slate-50 dark:bg-slate-800/50 px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center gap-3">
+                     <div className="bg-purple-100 dark:bg-purple-900/30 p-1.5 rounded-lg text-purple-600 dark:text-purple-400">
+                         <Activity size={18} />
+                     </div>
+                     <h3 className="font-bold text-slate-700 dark:text-slate-200 text-sm tracking-wide">Fiziksel Detaylar</h3>
                 </div>
 
-                {/* 4. Other Details */}
-                <div className="space-y-4">
+                <div className="p-6 space-y-5">
                     <div>
-                        <div className="flex justify-between items-center mb-1">
-                            <label className="text-sm font-medium text-slate-600 dark:text-gray-400">Renk / Özellikler</label>
+                        <div className="flex justify-between items-center mb-2">
+                            <label className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase ml-1">Renk / Özellikler</label>
                             <PrivacyToggle isPublic={petData.features?.isPublic || false} onChange={(v) => updatePetField('features', 'isPublic', v)} />
                         </div>
                         <Input 
                             value={petData.features?.value} 
                             onChange={(e) => updatePetField('features', 'value', e.target.value)}
-                            placeholder="Siyah benekli, sol kulak kesik..."
-                            className="!mb-0 !bg-white dark:!bg-black/40 !border-slate-300 dark:!border-gray-800 focus:!border-matrix-500/50"
+                            placeholder="Siyah benekli..."
+                            className="!mb-0"
                         />
                     </div>
 
                      <div>
-                        <div className="flex justify-between items-center mb-1">
-                            <label className="text-sm font-medium text-slate-600 dark:text-gray-400">Boy / Kilo (Yaklaşık)</label>
+                        <div className="flex justify-between items-center mb-2">
+                            <label className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase ml-1">Boy / Kilo</label>
                             <PrivacyToggle isPublic={petData.sizeInfo?.isPublic || false} onChange={(v) => updatePetField('sizeInfo', 'isPublic', v)} />
                         </div>
                         <Input 
                             value={petData.sizeInfo?.value} 
                             onChange={(e) => updatePetField('sizeInfo', 'value', e.target.value)}
-                            placeholder="Orta boy, 15kg civarı"
-                            className="!mb-0 !bg-white dark:!bg-black/40 !border-slate-300 dark:!border-gray-800 focus:!border-matrix-500/50"
+                            placeholder="Orta boy, 15kg..."
+                            className="!mb-0"
                         />
                     </div>
                     
                     <div>
-                        <div className="flex justify-between items-center mb-1">
-                             <label className="text-sm font-medium text-slate-600 dark:text-gray-400">Huy Bilgisi</label>
+                        <div className="flex justify-between items-center mb-2">
+                             <label className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase ml-1">Huy Bilgisi</label>
                              <PrivacyToggle isPublic={petData.temperament?.isPublic || false} onChange={(v) => updatePetField('temperament', 'isPublic', v)} />
                         </div>
                         <div className="relative">
                             <select 
-                                className="w-full bg-white dark:bg-black/40 border border-slate-300 dark:border-gray-800 rounded-xl p-3 text-sm appearance-none text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-matrix-500/50 transition-all mb-2"
+                                className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-3.5 text-sm appearance-none text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-matrix-100 dark:focus:ring-matrix-900 focus:border-matrix-500 transition-all shadow-sm mb-2"
                                 value={currentSelectValue}
                                 onChange={handleTemperamentSelect}
                             >
@@ -456,22 +456,22 @@ export const PetForm: React.FC<PetFormProps> = ({ user, onUpdateUser, initialPet
                                 {TEMPERAMENT_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
                                 <option value="OTHER">Diğer (Kendim Yazacağım)</option>
                             </select>
-                            <ChevronDown className="absolute right-3 top-3.5 text-slate-500 pointer-events-none" size={16} />
+                            <ChevronDown className="absolute right-3 top-3.5 text-slate-400 pointer-events-none" size={18} />
                             
                             {isCustomTemperament && (
                                 <Input 
-                                    placeholder="Huy bilgisini buraya yazın..."
+                                    placeholder="Huy bilgisini yazın..."
                                     value={petData.temperament?.value || ''}
                                     onChange={(e) => updatePetField('temperament', 'value', e.target.value)}
-                                    className="!mb-0 !bg-white dark:!bg-black/40 animate-in fade-in slide-in-from-top-1"
+                                    className="!mb-0 animate-in slide-in-from-top-1"
                                 />
                             )}
                         </div>
                     </div>
 
                      <div>
-                        <div className="flex justify-between items-center mb-1">
-                            <label className="text-sm font-medium text-slate-600 dark:text-gray-400 flex items-center gap-1">
+                        <div className="flex justify-between items-center mb-2">
+                            <label className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase ml-1 flex items-center gap-1">
                                 <ShieldAlert size={14} className="text-red-500" /> Sağlık Uyarısı
                             </label>
                             <PrivacyToggle isPublic={petData.healthWarning?.isPublic || false} onChange={(v) => updatePetField('healthWarning', 'isPublic', v)} />
@@ -479,56 +479,60 @@ export const PetForm: React.FC<PetFormProps> = ({ user, onUpdateUser, initialPet
                         <Input 
                             value={petData.healthWarning?.value} 
                             onChange={(e) => updatePetField('healthWarning', 'value', e.target.value)}
-                            placeholder="Alerjisi var, ilaç kullanıyor..."
-                            className="!mb-0 !bg-white dark:!bg-black/40 !border-red-200 dark:!border-red-900/30 focus:!border-red-500/50"
+                            placeholder="Alerjisi var..."
+                            className="!mb-0 border-red-200 focus:border-red-500 focus:ring-red-100"
                         />
                     </div>
                 </div>
             </div>
 
-            {/* Part 3: Professional Info (Optional) */}
-            <div className="bg-white dark:bg-dark-surface/50 p-5 rounded-2xl border border-slate-200 dark:border-gray-800/60 backdrop-blur-sm space-y-4 shadow-sm transition-colors duration-300">
-                <div className="flex items-center gap-2 text-slate-500 dark:text-gray-400 mb-2">
-                    <ShieldCheck size={18} />
-                    <h3 className="font-semibold text-sm">Veteriner & Çip</h3>
+            {/* Part 3: Professional Info (Card) */}
+            <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
+                <div className="bg-slate-50 dark:bg-slate-800/50 px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center gap-3">
+                     <div className="bg-emerald-100 dark:bg-emerald-900/30 p-1.5 rounded-lg text-emerald-600 dark:text-emerald-400">
+                         <ShieldCheck size={18} />
+                     </div>
+                     <h3 className="font-bold text-slate-700 dark:text-slate-200 text-sm tracking-wide">Klinik & Çip</h3>
                 </div>
                 
-                 <div>
-                    <div className="flex justify-between items-center mb-1">
-                        <label className="text-xs font-medium text-slate-500 dark:text-gray-400">Veteriner / Klinik (Tel)</label>
-                        <PrivacyToggle isPublic={petData.vetInfo?.isPublic || false} onChange={(v) => updatePetField('vetInfo', 'isPublic', v)} />
+                <div className="p-6 space-y-5">
+                     <div>
+                        <div className="flex justify-between items-center mb-2">
+                            <label className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase ml-1">Veteriner Tel</label>
+                            <PrivacyToggle isPublic={petData.vetInfo?.isPublic || false} onChange={(v) => updatePetField('vetInfo', 'isPublic', v)} />
+                        </div>
+                        <Input 
+                            type="tel"
+                            value={petData.vetInfo?.value} 
+                            onChange={(e) => updatePetField('vetInfo', 'value', formatPhoneNumber(e.target.value))}
+                            placeholder="0212 ..."
+                            className="!mb-0"
+                        />
                     </div>
-                    <Input 
-                        type="tel"
-                        value={petData.vetInfo?.value} 
-                        onChange={(e) => updatePetField('vetInfo', 'value', formatPhoneNumber(e.target.value))}
-                        placeholder="0212 ..."
-                        className="!mb-0"
-                    />
-                </div>
 
-                <div>
-                    <label className="block text-xs font-medium text-slate-500 dark:text-gray-400 mb-1">
-                        Mikroçip No (Sadece Sahibi Görür)
-                    </label>
-                    <Input 
-                        value={petData.microchip} 
-                        onChange={(e) => setPetData({...petData, microchip: e.target.value})}
-                        placeholder="15 haneli çip numarası"
-                        className="!mb-0 font-mono text-sm tracking-wider bg-slate-50 dark:bg-dark-input/50"
-                    />
+                    <div>
+                        <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-2 uppercase ml-1">
+                            Mikroçip No (Gizli)
+                        </label>
+                        <Input 
+                            value={petData.microchip} 
+                            onChange={(e) => setPetData({...petData, microchip: e.target.value})}
+                            placeholder="15 haneli çip numarası"
+                            className="!mb-0 font-mono tracking-wider"
+                        />
+                    </div>
                 </div>
             </div>
         </section>
 
         {/* Submit Button */}
-        <div className="pt-4">
+        <div className="pt-2">
             <button 
                 type="submit" 
-                className="w-full bg-matrix-600 hover:bg-matrix-500 text-white py-4 rounded-2xl font-bold text-lg shadow-xl shadow-matrix-900/20 dark:shadow-matrix-900/50 transition-all active:scale-95 flex items-center justify-center gap-2"
+                className="w-full bg-gradient-to-r from-matrix-600 to-matrix-700 hover:from-matrix-500 hover:to-matrix-600 text-white py-4 rounded-2xl font-bold text-lg shadow-lg shadow-matrix-500/30 transition-all active:scale-95 flex items-center justify-center gap-2"
             >
                 <Save size={24} />
-                {isEditMode ? 'Değişiklikleri Kaydet' : 'Kaydı Tamamla'}
+                {isEditMode ? 'Kaydet' : 'Kaydı Tamamla'}
             </button>
         </div>
 

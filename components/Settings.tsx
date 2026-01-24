@@ -14,18 +14,15 @@ interface SettingsProps {
 }
 
 export const Settings: React.FC<SettingsProps> = ({ user, onUpdateUser, currentTheme, onToggleTheme }) => {
-  // --- Email Verification State ---
   const [verificationCode, setVerificationCode] = useState('');
   const [isVerifyingEmail, setIsVerifyingEmail] = useState(false);
   const [showVerificationInput, setShowVerificationInput] = useState(false);
 
-  // --- Password Change State ---
   const [currentPass, setCurrentPass] = useState('');
   const [newPass, setNewPass] = useState('');
   const [confirmPass, setConfirmPass] = useState('');
   const [passMessage, setPassMessage] = useState<{type: 'success' | 'error', text: string} | null>(null);
 
-  // --- Communication Preferences State ---
   const [isPhoneChecked, setIsPhoneChecked] = useState(
     user.contactPreference === ContactPreference.BOTH || 
     user.contactPreference === ContactPreference.PHONE
@@ -33,7 +30,6 @@ export const Settings: React.FC<SettingsProps> = ({ user, onUpdateUser, currentT
   const [tempPhone, setTempPhone] = useState(user.phone || '');
   const [prefMessage, setPrefMessage] = useState<string | null>(null);
 
-  // --- Emergency Contact State ---
   const [emergencyName, setEmergencyName] = useState(user.emergencyContactName || '');
   const [isEmEmailChecked, setIsEmEmailChecked] = useState(!!user.emergencyContactEmail);
   const [isEmPhoneChecked, setIsEmPhoneChecked] = useState(!!user.emergencyContactPhone);
@@ -42,12 +38,9 @@ export const Settings: React.FC<SettingsProps> = ({ user, onUpdateUser, currentT
   const [emMessage, setEmMessage] = useState<{type: 'success' | 'error', text: string} | null>(null);
 
 
-  // Helper to update user state easily
   const updateField = (field: keyof UserProfile, value: any) => {
     onUpdateUser({ ...user, [field]: value });
   };
-
-  // --- Handlers ---
 
   const handleSendCode = async () => {
     if (!user.email || !user.email.includes('@')) {
@@ -58,7 +51,6 @@ export const Settings: React.FC<SettingsProps> = ({ user, onUpdateUser, currentT
     await sendEmailVerification(user.email);
     setIsVerifyingEmail(false);
     setShowVerificationInput(true);
-    // Alert removed. Code is now logged to console for dev, or sent via email in prod.
     alert("Doğrulama kodu e-posta adresinize gönderildi. (Geliştirici Notu: Konsolu kontrol edin)");
   };
 
@@ -75,189 +67,154 @@ export const Settings: React.FC<SettingsProps> = ({ user, onUpdateUser, currentT
 
   const handleSavePreferences = () => {
     setPrefMessage(null);
-
-    // Validate phone if checked
     if (isPhoneChecked && !tempPhone.trim()) {
         setPrefMessage("Lütfen telefon numaranızı giriniz.");
         return; 
     }
-
     const newPreference = isPhoneChecked ? ContactPreference.BOTH : ContactPreference.EMAIL;
-
     onUpdateUser({
         ...user,
         contactPreference: newPreference,
         phone: isPhoneChecked ? tempPhone : ''
     });
-
     setPrefMessage("Tercihler başarıyla kaydedildi.");
     setTimeout(() => setPrefMessage(null), 3000);
   };
 
   const handleSaveEmergency = () => {
     setEmMessage(null);
-
-    // Validation Logic
-    // 1. If Name is NOT empty, at least one contact method must be checked AND filled.
     if (emergencyName.trim()) {
         if (!isEmEmailChecked && !isEmPhoneChecked) {
             setEmMessage({ type: 'error', text: "Ad soyad girildiğinde en az bir iletişim yöntemi seçmelisiniz." });
             return;
         }
-
         if (isEmEmailChecked && !emEmail.trim()) {
             setEmMessage({ type: 'error', text: "Lütfen acil durum e-posta adresini giriniz." });
             return;
         }
-
         if (isEmPhoneChecked && !emPhone.trim()) {
             setEmMessage({ type: 'error', text: "Lütfen acil durum telefon numarasını giriniz." });
             return;
         }
     }
-
-    // Prepare data to save (if unchecked, save as undefined/empty)
     const dataToSave = {
         emergencyContactName: emergencyName.trim(),
         emergencyContactEmail: isEmEmailChecked ? emEmail.trim() : undefined,
         emergencyContactPhone: isEmPhoneChecked ? emPhone.trim() : undefined
     };
-
-    onUpdateUser({
-        ...user,
-        ...dataToSave
-    });
-
+    onUpdateUser({ ...user, ...dataToSave });
     setEmMessage({ type: 'success', text: "Acil durum kişisi güncellendi." });
     setTimeout(() => setEmMessage(null), 3000);
   };
 
   const handleChangePassword = () => {
     setPassMessage(null);
-
     if (!currentPass || !newPass || !confirmPass) {
         setPassMessage({ type: 'error', text: "Lütfen tüm şifre alanlarını doldurun." });
         return;
     }
-
-    // STRICT PASSWORD CHECK
-    // Ensure both are treated as strings and trimmed to avoid '1234' vs '1234 ' or 1234 vs '1234' issues
     const actualCurrentPass = String(user.password || "").trim();
     const inputCurrentPass = String(currentPass).trim();
-
     if (inputCurrentPass !== actualCurrentPass) {
         setPassMessage({ type: 'error', text: "Mevcut şifrenizi yanlış girdiniz." });
         return;
     }
-
     if (newPass !== confirmPass) {
         setPassMessage({ type: 'error', text: "Yeni şifreler birbiriyle eşleşmiyor." });
         return;
     }
-
     if (newPass.length < 4) {
         setPassMessage({ type: 'error', text: "Yeni şifre en az 4 karakter olmalıdır." });
         return;
     }
-
     updateField('password', newPass);
     setCurrentPass('');
     setNewPass('');
     setConfirmPass('');
     setPassMessage({ type: 'success', text: "Şifreniz başarıyla güncellendi." });
-    
-    setTimeout(() => {
-        setPassMessage(null);
-    }, 4000);
+    setTimeout(() => setPassMessage(null), 4000);
   };
 
   return (
-    <div className="pb-24 px-4 pt-6 space-y-6 max-w-lg mx-auto animate-in fade-in">
-      <div className="flex items-center justify-between mb-4 p-2">
+    <div className="pb-32 px-4 pt-8 space-y-6 max-w-lg mx-auto animate-in fade-in">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-2 px-1">
         <div className="flex items-center gap-3">
-            <div className="w-14 h-14 bg-gradient-to-br from-matrix-500 to-matrix-600 dark:from-matrix-900 dark:to-matrix-800 rounded-full flex items-center justify-center border border-matrix-500/30 text-white dark:text-matrix-500 shadow-lg shadow-matrix-900/20 dark:shadow-matrix-900/50">
+            <div className="w-12 h-12 bg-white dark:bg-slate-800 rounded-2xl flex items-center justify-center border border-slate-100 dark:border-slate-700 shadow-md text-matrix-600 dark:text-matrix-400">
                 <User size={28} />
             </div>
             <div>
-                <h2 className="text-xl font-bold text-slate-900 dark:text-white tracking-wide">Ayarlar</h2>
-                <p className="text-sm text-slate-500 dark:text-gray-400 font-medium">{user.fullName}</p>
+                <h2 className="text-2xl font-black text-slate-800 dark:text-white tracking-tight">Ayarlar</h2>
+                <p className="text-xs text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wide">{user.fullName}</p>
             </div>
         </div>
         
-        {/* Theme Toggle */}
         <button 
             onClick={onToggleTheme}
-            className="p-3 rounded-xl bg-white dark:bg-dark-surface border border-slate-200 dark:border-gray-800 text-slate-600 dark:text-gray-300 shadow-sm transition-all active:scale-95"
-            aria-label="Temayı Değiştir"
+            className="p-3 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 shadow-sm transition-all active:scale-95"
         >
             {currentTheme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
         </button>
       </div>
 
-      {/* ALERT BANNER for Unverified Email */}
+      {/* ALERT BANNER */}
       {!user.isEmailVerified && (
-        <div className="bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/40 p-4 rounded-xl flex items-center gap-3 shadow-[0_0_15px_rgba(239,68,68,0.15)] animate-pulse">
-            <div className="bg-red-100 dark:bg-red-500/20 p-2 rounded-full">
-                <AlertTriangle className="text-red-600 dark:text-red-500" size={24} />
-            </div>
+        <div className="bg-red-50 dark:bg-red-900/10 border-l-4 border-red-500 p-4 rounded-r-xl flex items-start gap-3 shadow-sm">
+            <AlertTriangle className="text-red-600 dark:text-red-400 shrink-0 mt-0.5" size={20} />
             <div>
-                <h4 className="text-red-600 dark:text-red-400 font-bold text-sm">Dikkat Gerekiyor</h4>
-                <p className="text-red-500/90 dark:text-red-300/80 text-xs">Lütfen e-posta adresinizi doğrulayın.</p>
+                <h4 className="text-red-800 dark:text-red-200 font-bold text-sm">E-posta Doğrulanmadı</h4>
+                <p className="text-red-600 dark:text-red-300 text-xs mt-0.5">Hesap güvenliği için doğrulama yapmanız önerilir.</p>
             </div>
         </div>
       )}
 
-      {/* 1. Email Verification Section */}
-      <section className="bg-white dark:bg-dark-surface/50 p-5 rounded-2xl border border-slate-200 dark:border-gray-800/60 backdrop-blur-sm shadow-sm relative overflow-hidden transition-colors duration-300">
-        <div className="absolute top-0 right-0 p-3 opacity-5 dark:opacity-10">
-            <Mail size={80} className="text-matrix-600 dark:text-matrix-500" />
+      {/* 1. Email Verification */}
+      <section className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden">
+        <div className="absolute top-0 right-0 p-4 opacity-[0.03] dark:opacity-[0.05]">
+            <Mail size={100} />
         </div>
         
-        <label className="block text-sm font-medium text-matrix-700 dark:text-matrix-200 mb-2">E-posta Adresi (Doğrulama)</label>
+        <h3 className="font-bold text-slate-700 dark:text-slate-200 text-sm mb-4 flex items-center gap-2">
+            <Lock size={16} className="text-matrix-500" /> Hesap Doğrulama
+        </h3>
+
         <div className="flex gap-2 mb-2 relative z-10">
             <div className="relative flex-1">
                 <input
                     type="email"
-                    value={user.email || 'E-posta girilmemiş'}
+                    value={user.email || 'E-posta yok'}
                     readOnly
                     disabled
-                    className={`w-full bg-slate-50 dark:bg-dark-input/50 border ${user.isEmailVerified ? 'border-matrix-500/50' : 'border-slate-300 dark:border-gray-700'} text-slate-900 dark:text-gray-300 rounded-xl p-3 pl-10 cursor-not-allowed select-none transition-colors`}
+                    className={`w-full bg-slate-50 dark:bg-slate-800 border ${user.isEmailVerified ? 'border-emerald-200 dark:border-emerald-900' : 'border-slate-200 dark:border-slate-700'} text-slate-700 dark:text-slate-300 rounded-xl p-3.5 pl-4 text-sm font-medium`}
                 />
-                <Lock className="absolute left-3 top-3.5 text-slate-400 dark:text-gray-500" size={16} />
             </div>
 
             {user.isEmailVerified ? (
-                <div className="flex items-center justify-center px-4 bg-matrix-100 dark:bg-matrix-500/20 border border-matrix-200 dark:border-matrix-500/30 rounded-xl">
-                    <Check className="text-matrix-600 dark:text-matrix-500" size={20}/>
+                <div className="flex items-center justify-center px-4 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-900/50 rounded-xl">
+                    <Check className="text-emerald-600 dark:text-emerald-400" size={20}/>
                 </div>
             ) : (
                 <button 
                     onClick={handleSendCode}
                     disabled={isVerifyingEmail || !user.email}
-                    className="bg-matrix-600 hover:bg-matrix-500 text-white px-4 rounded-xl text-sm font-semibold disabled:opacity-50 transition-colors shadow-lg shadow-matrix-900/20 whitespace-nowrap"
+                    className="bg-matrix-600 hover:bg-matrix-700 text-white px-5 rounded-xl text-sm font-bold shadow-lg shadow-matrix-500/20 transition-all active:scale-95"
                 >
                     {isVerifyingEmail ? '...' : 'Doğrula'}
                 </button>
             )}
         </div>
         
-        {!user.isEmailVerified && user.email && (
-            <p className="text-[10px] text-slate-500 dark:text-gray-400 mt-1 ml-1">
-                * E-posta adresi "Kayıt" sayfasından değiştirilebilir.
-            </p>
-        )}
-
         {showVerificationInput && !user.isEmailVerified && (
-            <div className="mt-3 flex gap-2 animate-in slide-in-from-top-2">
+            <div className="mt-4 flex gap-2 animate-in slide-in-from-top-2">
                 <input
                 type="text"
                 value={verificationCode}
                 onChange={(e) => setVerificationCode(e.target.value)}
                 placeholder="6 haneli kod"
                 maxLength={6}
-                className="flex-1 bg-slate-50 dark:bg-dark-input border border-slate-300 dark:border-gray-700 rounded-xl p-2 text-sm text-slate-900 dark:text-white focus:border-matrix-500 outline-none transition-colors"
+                className="flex-1 bg-white dark:bg-slate-800 border border-matrix-300 dark:border-matrix-700 rounded-xl p-3 text-sm text-center font-bold tracking-widest outline-none focus:ring-2 focus:ring-matrix-500"
                 />
-                <button onClick={handleVerifyCode} className="bg-slate-900 dark:bg-white text-white dark:text-black hover:bg-slate-700 dark:hover:bg-gray-200 px-4 rounded-xl text-sm font-bold transition-colors">
+                <button onClick={handleVerifyCode} className="bg-slate-800 dark:bg-white text-white dark:text-slate-900 px-5 rounded-xl text-sm font-bold">
                 Onayla
                 </button>
             </div>
@@ -265,40 +222,36 @@ export const Settings: React.FC<SettingsProps> = ({ user, onUpdateUser, currentT
       </section>
 
       {/* 2. Communication Preferences */}
-      <section className="bg-white dark:bg-dark-surface/50 p-5 rounded-2xl border border-slate-200 dark:border-gray-800/60 backdrop-blur-sm space-y-5 shadow-sm transition-colors duration-300">
-        <div className="flex items-center gap-2 text-red-500 dark:text-red-400 mb-1">
-            <Phone size={18} />
-            <h3 className="font-semibold text-sm">Kayıp Durumunda İletişim Tercihi</h3>
-        </div>
+      <section className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
+        <h3 className="font-bold text-slate-700 dark:text-slate-200 text-sm mb-2 flex items-center gap-2">
+            <Phone size={16} className="text-red-500" /> Kayıp İletişim Tercihi
+        </h3>
 
         <div className="space-y-3">
-            {/* Email Checkbox (Always On) */}
-            <div className="flex items-center gap-3 p-3 bg-slate-50 dark:bg-dark-input/50 rounded-xl border border-slate-200 dark:border-gray-700 opacity-80 cursor-not-allowed">
-                <div className="w-5 h-5 rounded bg-matrix-500 text-black flex items-center justify-center border border-matrix-500">
+            {/* Email (Fixed) */}
+            <div className="flex items-center gap-3 p-3.5 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-800 opacity-70">
+                <div className="w-5 h-5 rounded bg-slate-300 dark:bg-slate-600 flex items-center justify-center text-white">
                     <Check size={14} strokeWidth={3} />
                 </div>
-                <div className="flex-1">
-                    <p className="text-sm font-medium text-slate-800 dark:text-gray-200">E-posta</p>
-                    <p className="text-xs text-slate-500 truncate">{user.email || 'Tanımlanmamış'}</p>
-                </div>
+                <span className="text-sm font-bold text-slate-700 dark:text-slate-300">E-posta (Zorunlu)</span>
             </div>
 
-            {/* Phone Checkbox */}
+            {/* Phone Toggle */}
             <div 
                 onClick={() => setIsPhoneChecked(!isPhoneChecked)}
-                className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${isPhoneChecked ? 'bg-matrix-50 dark:bg-matrix-900/20 border-matrix-200 dark:border-matrix-500/50' : 'bg-white dark:bg-dark-input border-slate-200 dark:border-gray-700 hover:border-slate-300 dark:hover:border-gray-600'}`}
+                className={`flex items-center gap-3 p-3.5 rounded-xl border cursor-pointer transition-all ${isPhoneChecked ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-900/50' : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 hover:border-slate-300'}`}
             >
-                <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${isPhoneChecked ? 'bg-matrix-500 border-matrix-500 text-black' : 'bg-transparent border-slate-400 dark:border-gray-500'}`}>
+                <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${isPhoneChecked ? 'bg-matrix-600 border-matrix-600 text-white' : 'bg-transparent border-slate-300 dark:border-slate-600'}`}>
                     {isPhoneChecked && <Check size={14} strokeWidth={3} />}
                 </div>
                 <div className="flex-1">
-                    <p className="text-sm font-medium text-slate-800 dark:text-gray-200">Telefon</p>
-                    <p className="text-xs text-slate-500">Daha hızlı iletişim için önerilir</p>
+                    <p className="text-sm font-bold text-slate-800 dark:text-slate-200">Telefon Numarası Göster</p>
+                    <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">Bulan kişi sizi arayabilir</p>
                 </div>
             </div>
 
             {isPhoneChecked && (
-                <div className="animate-in slide-in-from-top-2 pt-1 pl-1">
+                <div className="animate-in slide-in-from-top-2 pt-1">
                     <Input
                         type="tel"
                         placeholder="0555 555 55 55"
@@ -309,158 +262,131 @@ export const Settings: React.FC<SettingsProps> = ({ user, onUpdateUser, currentT
                 </div>
             )}
 
-            <div className="pt-2">
-                <button 
-                    onClick={handleSavePreferences}
-                    className="w-full bg-matrix-600 hover:bg-matrix-500 text-white py-3 rounded-xl text-sm font-bold shadow-lg shadow-matrix-900/30 flex items-center justify-center gap-2 transition-all active:scale-95"
-                >
-                    <Save size={18} />
-                    Tercihleri Kaydet
-                </button>
-            </div>
+            <button 
+                onClick={handleSavePreferences}
+                className="w-full mt-2 bg-slate-800 dark:bg-slate-700 text-white py-3 rounded-xl text-sm font-bold shadow-lg transition-all active:scale-95"
+            >
+                Tercihleri Kaydet
+            </button>
 
             {prefMessage && (
-                <div className={`text-center text-sm font-medium animate-in fade-in slide-in-from-top-1 ${prefMessage.includes('başarıyla') ? 'text-matrix-600 dark:text-matrix-400' : 'text-red-500 dark:text-red-400'}`}>
+                <div className="text-center text-xs font-bold text-emerald-600 dark:text-emerald-400 animate-in fade-in">
                     {prefMessage}
                 </div>
             )}
         </div>
       </section>
 
-      {/* 3. Emergency Contact (Redesigned & Moved Up) */}
-      <section className="bg-white dark:bg-dark-surface/50 p-5 rounded-2xl border border-slate-200 dark:border-gray-800/60 backdrop-blur-sm shadow-sm space-y-4 transition-colors duration-300">
-        <div className="flex items-center gap-2 mb-2 text-red-500 dark:text-red-400">
-            <Shield size={18} />
-            <h3 className="font-semibold text-sm">Acil Durum Kişisi (2. Kişi - Opsiyonel)</h3>
-        </div>
+      {/* 3. Emergency Contact */}
+      <section className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-5">
+        <h3 className="font-bold text-slate-700 dark:text-slate-200 text-sm flex items-center gap-2">
+            <Shield size={16} className="text-orange-500" /> Acil Durum Kişisi (Yedek)
+        </h3>
 
-        {/* Name Field */}
-        <div className="space-y-4">
-            <Input 
-                placeholder="İsim Soyisim (Opsiyonel)"
-                value={emergencyName}
-                onChange={(e) => setEmergencyName(e.target.value)}
-                className="!mb-0"
-                rightElement={<Users size={18} className="text-slate-400 dark:text-gray-500" />}
-            />
+        <Input 
+            label="İsim Soyisim"
+            placeholder="Kişi Adı"
+            value={emergencyName}
+            onChange={(e) => setEmergencyName(e.target.value)}
+            className="!mb-0"
+        />
 
-            {/* Emergency Email Checkbox */}
-            <div 
+        <div className="grid grid-cols-2 gap-3">
+             {/* Email Check */}
+             <div 
                 onClick={() => setIsEmEmailChecked(!isEmEmailChecked)}
-                className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${isEmEmailChecked ? 'bg-matrix-50 dark:bg-matrix-900/20 border-matrix-200 dark:border-matrix-500/50' : 'bg-white dark:bg-dark-input border-slate-200 dark:border-gray-700 hover:border-slate-300 dark:hover:border-gray-600'}`}
-            >
-                <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${isEmEmailChecked ? 'bg-matrix-500 border-matrix-500 text-black' : 'bg-transparent border-slate-400 dark:border-gray-500'}`}>
-                    {isEmEmailChecked && <Check size={14} strokeWidth={3} />}
+                className={`p-3 rounded-xl border cursor-pointer transition-all flex items-center gap-2 ${isEmEmailChecked ? 'bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-800' : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700'}`}
+             >
+                <div className={`w-4 h-4 rounded border flex items-center justify-center ${isEmEmailChecked ? 'bg-orange-500 border-orange-500 text-white' : 'border-slate-300'}`}>
+                    {isEmEmailChecked && <Check size={10} strokeWidth={4} />}
                 </div>
-                <div className="flex-1">
-                    <p className="text-sm font-medium text-slate-800 dark:text-gray-200">E-posta</p>
-                </div>
+                <span className="text-xs font-bold text-slate-700 dark:text-slate-300">E-posta</span>
             </div>
-            {isEmEmailChecked && (
-                <div className="animate-in slide-in-from-top-2 pt-1 pl-1">
-                     <Input 
-                        type="email"
-                        placeholder="acil@ornek.com"
-                        value={emEmail}
-                        onChange={(e) => setEmEmail(e.target.value)}
-                        className="!mb-0"
-                    />
-                </div>
-            )}
 
-            {/* Emergency Phone Checkbox */}
-            <div 
+            {/* Phone Check */}
+             <div 
                 onClick={() => setIsEmPhoneChecked(!isEmPhoneChecked)}
-                className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${isEmPhoneChecked ? 'bg-matrix-50 dark:bg-matrix-900/20 border-matrix-200 dark:border-matrix-500/50' : 'bg-white dark:bg-dark-input border-slate-200 dark:border-gray-700 hover:border-slate-300 dark:hover:border-gray-600'}`}
-            >
-                <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${isEmPhoneChecked ? 'bg-matrix-500 border-matrix-500 text-black' : 'bg-transparent border-slate-400 dark:border-gray-500'}`}>
-                    {isEmPhoneChecked && <Check size={14} strokeWidth={3} />}
+                className={`p-3 rounded-xl border cursor-pointer transition-all flex items-center gap-2 ${isEmPhoneChecked ? 'bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-800' : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700'}`}
+             >
+                <div className={`w-4 h-4 rounded border flex items-center justify-center ${isEmPhoneChecked ? 'bg-orange-500 border-orange-500 text-white' : 'border-slate-300'}`}>
+                    {isEmPhoneChecked && <Check size={10} strokeWidth={4} />}
                 </div>
-                <div className="flex-1">
-                    <p className="text-sm font-medium text-slate-800 dark:text-gray-200">Telefon</p>
-                </div>
+                <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Telefon</span>
             </div>
-            {isEmPhoneChecked && (
-                <div className="animate-in slide-in-from-top-2 pt-1 pl-1">
-                     <Input 
-                        type="tel"
-                        placeholder="0555 555 55 55"
-                        value={emPhone}
-                        onChange={(e) => setEmPhone(formatPhoneNumber(e.target.value))}
-                        className="!mb-0"
-                    />
-                </div>
-            )}
-
-             <div className="pt-2">
-                <button 
-                    onClick={handleSaveEmergency}
-                    className="w-full bg-matrix-600 hover:bg-matrix-500 text-white py-3 rounded-xl text-sm font-bold shadow-lg shadow-matrix-900/30 flex items-center justify-center gap-2 transition-all active:scale-95"
-                >
-                    <Save size={18} />
-                    Acil Durum Kişisi Kaydet
-                </button>
-            </div>
-
-            {emMessage && (
-                <div className={`flex items-center gap-2 p-3 rounded-xl text-sm animate-in fade-in slide-in-from-top-1 ${
-                    emMessage.type === 'success' 
-                    ? 'bg-matrix-100 dark:bg-matrix-500/10 text-matrix-700 dark:text-matrix-400 border border-matrix-200 dark:border-matrix-500/20' 
-                    : 'bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-500/20'
-                }`}>
-                    {emMessage.type === 'success' ? <CheckCircle2 size={18} /> : <AlertCircle size={18} />}
-                    <span className="font-medium">{emMessage.text}</span>
-                </div>
-            )}
         </div>
+
+        {isEmEmailChecked && (
+             <Input 
+                type="email"
+                placeholder="Yedek E-posta"
+                value={emEmail}
+                onChange={(e) => setEmEmail(e.target.value)}
+                className="!mb-0"
+            />
+        )}
+        {isEmPhoneChecked && (
+             <Input 
+                type="tel"
+                placeholder="Yedek Telefon"
+                value={emPhone}
+                onChange={(e) => setEmPhone(formatPhoneNumber(e.target.value))}
+                className="!mb-0"
+            />
+        )}
+
+        <button 
+            onClick={handleSaveEmergency}
+            className="w-full bg-slate-800 dark:bg-slate-700 text-white py-3 rounded-xl text-sm font-bold shadow-lg transition-all active:scale-95"
+        >
+            Kaydet
+        </button>
+
+        {emMessage && (
+            <div className={`flex items-center justify-center gap-2 p-3 rounded-xl text-xs font-bold animate-in fade-in ${emMessage.type === 'success' ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'}`}>
+                {emMessage.text}
+            </div>
+        )}
       </section>
 
-      {/* 4. Password Change Section (Moved to Bottom) */}
-      <section className="bg-white dark:bg-dark-surface/50 p-5 rounded-2xl border border-slate-200 dark:border-gray-800/60 backdrop-blur-sm space-y-4 shadow-sm transition-colors duration-300">
-        <div className="flex items-center gap-2 mb-2 text-matrix-600 dark:text-matrix-400">
-            <KeyRound size={18} />
-            <h3 className="font-semibold text-sm">Güvenlik / Şifre Değiştir</h3>
-        </div>
+      {/* 4. Password Change */}
+      <section className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
+        <h3 className="font-bold text-slate-700 dark:text-slate-200 text-sm flex items-center gap-2">
+            <KeyRound size={16} className="text-purple-500" /> Şifre Değiştir
+        </h3>
         
-        <div className="space-y-3">
+        <div className="space-y-4">
             <Input 
                 type="password"
                 placeholder="Mevcut Şifre"
                 value={currentPass}
                 onChange={(e) => setCurrentPass(e.target.value)}
-                className="!mb-0 text-sm"
+                className="!mb-0"
             />
              <Input 
                 type="password"
                 placeholder="Yeni Şifre"
                 value={newPass}
                 onChange={(e) => setNewPass(e.target.value)}
-                className="!mb-0 text-sm"
+                className="!mb-0"
             />
              <Input 
                 type="password"
                 placeholder="Yeni Şifre (Tekrar)"
                 value={confirmPass}
                 onChange={(e) => setConfirmPass(e.target.value)}
-                className="!mb-0 text-sm"
+                className="!mb-0"
             />
             
             <button 
                 onClick={handleChangePassword}
-                className="w-full bg-slate-100 hover:bg-slate-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-slate-800 dark:text-gray-200 border border-slate-300 dark:border-gray-700 py-3 rounded-xl text-sm font-semibold transition-colors mt-2"
+                className="w-full bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-slate-600 py-3 rounded-xl text-sm font-bold transition-colors"
             >
                 Şifreyi Güncelle
             </button>
 
-            {/* Feedback Message */}
             {passMessage && (
-                <div className={`flex items-center gap-2 p-3 rounded-xl text-sm animate-in fade-in slide-in-from-top-1 ${
-                    passMessage.type === 'success' 
-                    ? 'bg-matrix-100 dark:bg-matrix-500/10 text-matrix-700 dark:text-matrix-400 border border-matrix-200 dark:border-matrix-500/20' 
-                    : 'bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-500/20'
-                }`}>
-                    {passMessage.type === 'success' ? <CheckCircle2 size={18} /> : <AlertCircle size={18} />}
-                    <span className="font-medium">{passMessage.text}</span>
+                <div className={`flex items-center justify-center gap-2 p-3 rounded-xl text-xs font-bold animate-in fade-in ${passMessage.type === 'success' ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'}`}>
+                    {passMessage.text}
                 </div>
             )}
         </div>
