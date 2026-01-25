@@ -241,7 +241,7 @@ const App: React.FC = () => {
   // --- RENDER LOGIN ---
   if (!user) {
     return (
-        <div className="min-h-screen font-sans bg-slate-50 dark:bg-matrix-950 transition-colors duration-300">
+        <div className="min-h-screen font-sans bg-slate-100 dark:bg-matrix-950 transition-colors duration-300">
              {updateAvailable && (
                 <div onClick={reloadApp} className="fixed top-0 left-0 right-0 bg-matrix-600 text-white p-3 text-center text-sm font-bold cursor-pointer z-[100] animate-in slide-in-from-top flex items-center justify-center gap-2 shadow-lg">
                     <RefreshCw size={18} className="animate-spin-slow" />
@@ -265,7 +265,7 @@ const App: React.FC = () => {
   const isAboutActive = currentView === 'about';
 
   return (
-    <div className="min-h-screen font-sans flex flex-col bg-slate-50 dark:bg-matrix-950 transition-colors duration-300">
+    <div className="min-h-screen font-sans flex flex-col bg-slate-100 dark:bg-matrix-950 transition-colors duration-300">
       
       {updateAvailable && (
           <div onClick={reloadApp} className="fixed top-4 left-4 right-4 bg-matrix-600 dark:bg-matrix-500 text-white p-4 rounded-xl shadow-2xl z-[100] flex items-center justify-between cursor-pointer animate-in slide-in-from-top duration-500 border border-white/20">
@@ -325,7 +325,7 @@ const App: React.FC = () => {
       </div>
 
       {/* Bottom Navigation - MODERN FLOATING STYLE */}
-      <nav className="fixed bottom-6 left-4 right-4 bg-white/90 dark:bg-matrix-900/90 backdrop-blur-lg border border-white/20 dark:border-white/5 rounded-3xl shadow-2xl shadow-slate-200/50 dark:shadow-black/50 z-50 transition-all duration-300 pb-1">
+      <nav className="fixed bottom-6 left-4 right-4 bg-white/90 dark:bg-matrix-900/90 backdrop-blur-lg border border-white/20 dark:border-white/5 rounded-3xl shadow-2xl shadow-slate-400/20 dark:shadow-black/50 z-50 transition-all duration-300 pb-1">
         <div className="grid grid-cols-5 h-16 items-center">
             
             {!petProfile ? (

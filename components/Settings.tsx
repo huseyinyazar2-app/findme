@@ -140,7 +140,7 @@ export const Settings: React.FC<SettingsProps> = ({ user, onUpdateUser, currentT
       {/* Header */}
       <div className="flex items-center justify-between mb-2 px-1">
         <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-white dark:bg-slate-800 rounded-2xl flex items-center justify-center border border-slate-100 dark:border-slate-700 shadow-md text-matrix-600 dark:text-matrix-400">
+            <div className="w-12 h-12 bg-white dark:bg-slate-800 rounded-2xl flex items-center justify-center border border-white/50 dark:border-slate-700 shadow-lg shadow-slate-200/50 dark:shadow-none text-matrix-600 dark:text-matrix-400">
                 <User size={28} />
             </div>
             <div>
@@ -151,7 +151,7 @@ export const Settings: React.FC<SettingsProps> = ({ user, onUpdateUser, currentT
         
         <button 
             onClick={onToggleTheme}
-            className="p-3 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 shadow-sm transition-all active:scale-95"
+            className="p-3 rounded-2xl bg-white dark:bg-slate-800 border border-white/50 dark:border-slate-700 text-slate-600 dark:text-slate-300 shadow-lg shadow-slate-200/50 dark:shadow-none transition-all active:scale-95"
         >
             {currentTheme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
         </button>
@@ -159,7 +159,7 @@ export const Settings: React.FC<SettingsProps> = ({ user, onUpdateUser, currentT
 
       {/* ALERT BANNER */}
       {!user.isEmailVerified && (
-        <div className="bg-red-50 dark:bg-red-900/10 border-l-4 border-red-500 p-4 rounded-r-xl flex items-start gap-3 shadow-sm">
+        <div className="bg-red-50 dark:bg-red-900/10 border-l-4 border-red-500 p-4 rounded-r-xl flex items-start gap-3 shadow-sm ring-1 ring-red-500/10">
             <AlertTriangle className="text-red-600 dark:text-red-400 shrink-0 mt-0.5" size={20} />
             <div>
                 <h4 className="text-red-800 dark:text-red-200 font-bold text-sm">E-posta Doğrulanmadı</h4>
@@ -169,7 +169,7 @@ export const Settings: React.FC<SettingsProps> = ({ user, onUpdateUser, currentT
       )}
 
       {/* 1. Email Verification */}
-      <section className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden">
+      <section className="bg-white dark:bg-slate-900 p-6 rounded-3xl shadow-xl shadow-slate-200/60 dark:shadow-black/20 ring-1 ring-black/5 dark:ring-white/10 relative overflow-hidden">
         <div className="absolute top-0 right-0 p-4 opacity-[0.03] dark:opacity-[0.05]">
             <Mail size={100} />
         </div>
@@ -222,7 +222,7 @@ export const Settings: React.FC<SettingsProps> = ({ user, onUpdateUser, currentT
       </section>
 
       {/* 2. Communication Preferences */}
-      <section className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
+      <section className="bg-white dark:bg-slate-900 p-6 rounded-3xl shadow-xl shadow-slate-200/60 dark:shadow-black/20 ring-1 ring-black/5 dark:ring-white/10 space-y-4">
         <h3 className="font-bold text-slate-700 dark:text-slate-200 text-sm mb-2 flex items-center gap-2">
             <Phone size={16} className="text-red-500" /> Kayıp İletişim Tercihi
         </h3>
@@ -278,7 +278,7 @@ export const Settings: React.FC<SettingsProps> = ({ user, onUpdateUser, currentT
       </section>
 
       {/* 3. Emergency Contact */}
-      <section className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-5">
+      <section className="bg-white dark:bg-slate-900 p-6 rounded-3xl shadow-xl shadow-slate-200/60 dark:shadow-black/20 ring-1 ring-black/5 dark:ring-white/10 space-y-5">
         <h3 className="font-bold text-slate-700 dark:text-slate-200 text-sm flex items-center gap-2">
             <Shield size={16} className="text-orange-500" /> Acil Durum Kişisi (Yedek)
         </h3>
@@ -349,7 +349,7 @@ export const Settings: React.FC<SettingsProps> = ({ user, onUpdateUser, currentT
       </section>
 
       {/* 4. Password Change */}
-      <section className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
+      <section className="bg-white dark:bg-slate-900 p-6 rounded-3xl shadow-xl shadow-slate-200/60 dark:shadow-black/20 ring-1 ring-black/5 dark:ring-white/10 space-y-4">
         <h3 className="font-bold text-slate-700 dark:text-slate-200 text-sm flex items-center gap-2">
             <KeyRound size={16} className="text-purple-500" /> Şifre Değiştir
         </h3>

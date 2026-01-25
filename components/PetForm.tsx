@@ -180,7 +180,7 @@ export const PetForm: React.FC<PetFormProps> = ({ user, onUpdateUser, initialPet
     <div className="pb-32 pt-8">
       <div className="px-6 mb-8">
         <div className="flex items-center gap-3 mb-2">
-            <div className="w-12 h-12 bg-white dark:bg-slate-800 rounded-2xl flex items-center justify-center shadow-md border border-slate-100 dark:border-slate-700 text-matrix-600 dark:text-matrix-400">
+            <div className="w-12 h-12 bg-white dark:bg-slate-800 rounded-2xl flex items-center justify-center shadow-lg shadow-slate-200/50 dark:shadow-none border border-white/50 dark:border-slate-700 text-matrix-600 dark:text-matrix-400">
                 <ShieldCheck size={28} />
             </div>
             <div>
@@ -197,8 +197,8 @@ export const PetForm: React.FC<PetFormProps> = ({ user, onUpdateUser, initialPet
       <form onSubmit={handleSubmit} className="px-4 space-y-6 max-w-lg mx-auto">
         
         {/* --- Section 1: Owner Info --- */}
-        <section className="bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
-             <div className="bg-slate-50 dark:bg-slate-800/50 px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center gap-3">
+        <section className="bg-white dark:bg-slate-900 rounded-3xl shadow-xl shadow-slate-200/60 dark:shadow-black/20 ring-1 ring-black/5 dark:ring-white/10 overflow-hidden">
+             <div className="bg-slate-50 dark:bg-slate-800/50 px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center gap-3">
                  <div className="bg-blue-100 dark:bg-blue-900/30 p-1.5 rounded-lg text-blue-600 dark:text-blue-400">
                      <UserCheck size={18} />
                  </div>
@@ -237,8 +237,8 @@ export const PetForm: React.FC<PetFormProps> = ({ user, onUpdateUser, initialPet
         </section>
 
         {/* --- Section 2: Residence --- */}
-        <section className="bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
-             <div className="bg-slate-50 dark:bg-slate-800/50 px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center gap-3">
+        <section className="bg-white dark:bg-slate-900 rounded-3xl shadow-xl shadow-slate-200/60 dark:shadow-black/20 ring-1 ring-black/5 dark:ring-white/10 overflow-hidden">
+             <div className="bg-slate-50 dark:bg-slate-800/50 px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center gap-3">
                  <div className="bg-orange-100 dark:bg-orange-900/30 p-1.5 rounded-lg text-orange-600 dark:text-orange-400">
                      <Home size={18} />
                  </div>
@@ -296,8 +296,8 @@ export const PetForm: React.FC<PetFormProps> = ({ user, onUpdateUser, initialPet
         {/* --- Section 3: Pet Info --- */}
         <section className="space-y-4">
             {/* Part 1: Basic Identity (Card) */}
-            <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
-                <div className="bg-slate-50 dark:bg-slate-800/50 px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center gap-3">
+            <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-xl shadow-slate-200/60 dark:shadow-black/20 ring-1 ring-black/5 dark:ring-white/10 overflow-hidden">
+                <div className="bg-slate-50 dark:bg-slate-800/50 px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center gap-3">
                      <div className="bg-matrix-100 dark:bg-matrix-900/30 p-1.5 rounded-lg text-matrix-600 dark:text-matrix-400">
                          <Dog size={18} />
                      </div>
@@ -406,8 +406,8 @@ export const PetForm: React.FC<PetFormProps> = ({ user, onUpdateUser, initialPet
             </div>
 
             {/* Part 2: Detailed Specs (Card) */}
-            <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
-                <div className="bg-slate-50 dark:bg-slate-800/50 px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center gap-3">
+            <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-xl shadow-slate-200/60 dark:shadow-black/20 ring-1 ring-black/5 dark:ring-white/10 overflow-hidden">
+                <div className="bg-slate-50 dark:bg-slate-800/50 px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center gap-3">
                      <div className="bg-purple-100 dark:bg-purple-900/30 p-1.5 rounded-lg text-purple-600 dark:text-purple-400">
                          <Activity size={18} />
                      </div>
@@ -487,8 +487,8 @@ export const PetForm: React.FC<PetFormProps> = ({ user, onUpdateUser, initialPet
             </div>
 
             {/* Part 3: Professional Info (Card) */}
-            <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
-                <div className="bg-slate-50 dark:bg-slate-800/50 px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center gap-3">
+            <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-xl shadow-slate-200/60 dark:shadow-black/20 ring-1 ring-black/5 dark:ring-white/10 overflow-hidden">
+                <div className="bg-slate-50 dark:bg-slate-800/50 px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center gap-3">
                      <div className="bg-emerald-100 dark:bg-emerald-900/30 p-1.5 rounded-lg text-emerald-600 dark:text-emerald-400">
                          <ShieldCheck size={18} />
                      </div>

@@ -347,7 +347,7 @@ export const InfoSummary: React.FC<InfoSummaryProps> = ({ user, pet, onUpdateUse
       
       {/* Page Header */}
       <div className="flex items-center gap-3 px-1">
-        <div className="w-12 h-12 bg-white dark:bg-slate-800 rounded-2xl flex items-center justify-center shadow-md border border-slate-100 dark:border-slate-700 text-matrix-600 dark:text-matrix-400">
+        <div className="w-12 h-12 bg-white dark:bg-slate-800 rounded-2xl flex items-center justify-center shadow-lg shadow-slate-200/50 dark:shadow-none border border-white/50 dark:border-slate-700 text-matrix-600 dark:text-matrix-400">
              <FileText size={24} />
         </div>
         <div>
@@ -361,8 +361,8 @@ export const InfoSummary: React.FC<InfoSummaryProps> = ({ user, pet, onUpdateUse
       </div>
 
       {/* User Info Section */}
-      <section className="bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
-            <div className="bg-slate-50 dark:bg-slate-800/50 px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center gap-3">
+      <section className="bg-white dark:bg-slate-900 rounded-3xl shadow-xl shadow-slate-200/60 dark:shadow-black/20 ring-1 ring-black/5 dark:ring-white/10 overflow-hidden">
+            <div className="bg-slate-50 dark:bg-slate-800/50 px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center gap-3">
                 <div className="bg-blue-100 dark:bg-blue-900/30 p-1.5 rounded-lg text-blue-600 dark:text-blue-400">
                     <User size={18} />
                 </div>
@@ -436,8 +436,8 @@ export const InfoSummary: React.FC<InfoSummaryProps> = ({ user, pet, onUpdateUse
 
       {/* Pet Info Section */}
       {pet ? (
-          <section className="bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
-                <div className="bg-slate-50 dark:bg-slate-800/50 px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center gap-3">
+          <section className="bg-white dark:bg-slate-900 rounded-3xl shadow-xl shadow-slate-200/60 dark:shadow-black/20 ring-1 ring-black/5 dark:ring-white/10 overflow-hidden">
+                <div className="bg-slate-50 dark:bg-slate-800/50 px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center gap-3">
                     <div className="bg-matrix-100 dark:bg-matrix-900/30 p-1.5 rounded-lg text-matrix-600 dark:text-matrix-400">
                         <Dog size={18} />
                     </div>
@@ -602,7 +602,7 @@ export const InfoSummary: React.FC<InfoSummaryProps> = ({ user, pet, onUpdateUse
                 />
           </section>
       ) : (
-          <div className="text-center p-12 bg-white dark:bg-slate-900 rounded-3xl border border-dashed border-slate-300 dark:border-slate-800">
+          <div className="text-center p-12 bg-white dark:bg-slate-900 rounded-3xl border border-dashed border-slate-300 dark:border-slate-800 shadow-sm">
               <div className="w-16 h-16 bg-slate-50 dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4">
                  <Dog className="text-slate-300 dark:text-slate-600" size={32} />
               </div>
