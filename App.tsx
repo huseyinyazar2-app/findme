@@ -204,7 +204,7 @@ const App: React.FC = () => {
         setHasUnsavedChanges(false);
         if (currentView === 'home') {
             alert("Kayıt başarıyla oluşturuldu.");
-            setCurrentView('settings');
+            setCurrentView('info'); // Redirect to Info page instead of Settings
             window.scrollTo(0, 0);
         }
     } else {

@@ -2,8 +2,7 @@
 import React, { useState } from 'react';
 import { UserProfile, ContactPreference } from '../types';
 import { Input } from './ui/Input';
-import { Phone, Check, Shield, User, Lock, Mail, KeyRound, AlertCircle, CheckCircle2, Save, Users, AlertTriangle, Moon, Sun } from 'lucide-react';
-import { sendEmailVerification, verifyEmailCode } from '../services/authService';
+import { Phone, Check, Shield, User, KeyRound, Save } from 'lucide-react';
 import { formatPhoneNumber } from '../constants';
 
 interface SettingsProps {
@@ -14,10 +13,6 @@ interface SettingsProps {
 }
 
 export const Settings: React.FC<SettingsProps> = ({ user, onUpdateUser, currentTheme, onToggleTheme }) => {
-  const [verificationCode, setVerificationCode] = useState('');
-  const [isVerifyingEmail, setIsVerifyingEmail] = useState(false);
-  const [showVerificationInput, setShowVerificationInput] = useState(false);
-
   const [currentPass, setCurrentPass] = useState('');
   const [newPass, setNewPass] = useState('');
   const [confirmPass, setConfirmPass] = useState('');
@@ -40,29 +35,6 @@ export const Settings: React.FC<SettingsProps> = ({ user, onUpdateUser, currentT
 
   const updateField = (field: keyof UserProfile, value: any) => {
     onUpdateUser({ ...user, [field]: value });
-  };
-
-  const handleSendCode = async () => {
-    if (!user.email || !user.email.includes('@')) {
-      alert("Profil sayfasında geçerli bir e-posta tanımlanmamış.");
-      return;
-    }
-    setIsVerifyingEmail(true);
-    await sendEmailVerification(user.email);
-    setIsVerifyingEmail(false);
-    setShowVerificationInput(true);
-    alert("Doğrulama kodu e-posta adresinize gönderildi. (Geliştirici Notu: Konsolu kontrol edin)");
-  };
-
-  const handleVerifyCode = async () => {
-    const isValid = await verifyEmailCode(verificationCode);
-    if (isValid) {
-      updateField('isEmailVerified', true);
-      setShowVerificationInput(false);
-      alert("E-posta başarıyla doğrulandı!");
-    } else {
-      alert("Hatalı kod! Lütfen kontrol ediniz.");
-    }
   };
 
   const handleSavePreferences = () => {
@@ -153,75 +125,11 @@ export const Settings: React.FC<SettingsProps> = ({ user, onUpdateUser, currentT
             onClick={onToggleTheme}
             className="p-3 rounded-2xl bg-white dark:bg-slate-800 border border-white/50 dark:border-slate-700 text-slate-600 dark:text-slate-300 shadow-lg shadow-slate-200/50 dark:shadow-none transition-all active:scale-95"
         >
-            {currentTheme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
+            {currentTheme === 'dark' ? '☀️' : '🌙'}
         </button>
       </div>
 
-      {/* ALERT BANNER */}
-      {!user.isEmailVerified && (
-        <div className="bg-red-50 dark:bg-red-900/10 border-l-4 border-red-500 p-4 rounded-r-xl flex items-start gap-3 shadow-sm ring-1 ring-red-500/10">
-            <AlertTriangle className="text-red-600 dark:text-red-400 shrink-0 mt-0.5" size={20} />
-            <div>
-                <h4 className="text-red-800 dark:text-red-200 font-bold text-sm">E-posta Doğrulanmadı</h4>
-                <p className="text-red-600 dark:text-red-300 text-xs mt-0.5">Hesap güvenliği için doğrulama yapmanız önerilir.</p>
-            </div>
-        </div>
-      )}
-
-      {/* 1. Email Verification */}
-      <section className="bg-white dark:bg-slate-900 p-6 rounded-3xl shadow-xl shadow-slate-200/60 dark:shadow-black/20 ring-1 ring-black/5 dark:ring-white/10 relative overflow-hidden">
-        <div className="absolute top-0 right-0 p-4 opacity-[0.03] dark:opacity-[0.05]">
-            <Mail size={100} />
-        </div>
-        
-        <h3 className="font-bold text-slate-700 dark:text-slate-200 text-sm mb-4 flex items-center gap-2">
-            <Lock size={16} className="text-matrix-500" /> Hesap Doğrulama
-        </h3>
-
-        <div className="flex gap-2 mb-2 relative z-10">
-            <div className="relative flex-1">
-                <input
-                    type="email"
-                    value={user.email || 'E-posta yok'}
-                    readOnly
-                    disabled
-                    className={`w-full bg-slate-50 dark:bg-slate-800 border ${user.isEmailVerified ? 'border-emerald-200 dark:border-emerald-900' : 'border-slate-200 dark:border-slate-700'} text-slate-700 dark:text-slate-300 rounded-xl p-3.5 pl-4 text-sm font-medium`}
-                />
-            </div>
-
-            {user.isEmailVerified ? (
-                <div className="flex items-center justify-center px-4 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-900/50 rounded-xl">
-                    <Check className="text-emerald-600 dark:text-emerald-400" size={20}/>
-                </div>
-            ) : (
-                <button 
-                    onClick={handleSendCode}
-                    disabled={isVerifyingEmail || !user.email}
-                    className="bg-matrix-600 hover:bg-matrix-700 text-white px-5 rounded-xl text-sm font-bold shadow-lg shadow-matrix-500/20 transition-all active:scale-95"
-                >
-                    {isVerifyingEmail ? '...' : 'Doğrula'}
-                </button>
-            )}
-        </div>
-        
-        {showVerificationInput && !user.isEmailVerified && (
-            <div className="mt-4 flex gap-2 animate-in slide-in-from-top-2">
-                <input
-                type="text"
-                value={verificationCode}
-                onChange={(e) => setVerificationCode(e.target.value)}
-                placeholder="6 haneli kod"
-                maxLength={6}
-                className="flex-1 bg-white dark:bg-slate-800 border border-matrix-300 dark:border-matrix-700 rounded-xl p-3 text-sm text-center font-bold tracking-widest outline-none focus:ring-2 focus:ring-matrix-500"
-                />
-                <button onClick={handleVerifyCode} className="bg-slate-800 dark:bg-white text-white dark:text-slate-900 px-5 rounded-xl text-sm font-bold">
-                Onayla
-                </button>
-            </div>
-        )}
-      </section>
-
-      {/* 2. Communication Preferences */}
+      {/* 1. Communication Preferences */}
       <section className="bg-white dark:bg-slate-900 p-6 rounded-3xl shadow-xl shadow-slate-200/60 dark:shadow-black/20 ring-1 ring-black/5 dark:ring-white/10 space-y-4">
         <h3 className="font-bold text-slate-700 dark:text-slate-200 text-sm mb-2 flex items-center gap-2">
             <Phone size={16} className="text-red-500" /> Kayıp İletişim Tercihi
@@ -277,7 +185,7 @@ export const Settings: React.FC<SettingsProps> = ({ user, onUpdateUser, currentT
         </div>
       </section>
 
-      {/* 3. Emergency Contact */}
+      {/* 2. Emergency Contact */}
       <section className="bg-white dark:bg-slate-900 p-6 rounded-3xl shadow-xl shadow-slate-200/60 dark:shadow-black/20 ring-1 ring-black/5 dark:ring-white/10 space-y-5">
         <h3 className="font-bold text-slate-700 dark:text-slate-200 text-sm flex items-center gap-2">
             <Shield size={16} className="text-orange-500" /> Acil Durum Kişisi (Yedek)
@@ -348,7 +256,7 @@ export const Settings: React.FC<SettingsProps> = ({ user, onUpdateUser, currentT
         )}
       </section>
 
-      {/* 4. Password Change */}
+      {/* 3. Password Change */}
       <section className="bg-white dark:bg-slate-900 p-6 rounded-3xl shadow-xl shadow-slate-200/60 dark:shadow-black/20 ring-1 ring-black/5 dark:ring-white/10 space-y-4">
         <h3 className="font-bold text-slate-700 dark:text-slate-200 text-sm flex items-center gap-2">
             <KeyRound size={16} className="text-purple-500" /> Şifre Değiştir
