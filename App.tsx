@@ -324,35 +324,35 @@ const App: React.FC = () => {
         )}
       </div>
 
-      {/* Bottom Navigation - MODERN FLOATING STYLE */}
-      <nav className="fixed bottom-6 left-4 right-4 bg-white/90 dark:bg-matrix-900/90 backdrop-blur-lg border border-white/20 dark:border-white/5 rounded-3xl shadow-2xl shadow-slate-400/20 dark:shadow-black/50 z-50 transition-all duration-300 pb-1">
-        <div className="grid grid-cols-5 h-16 items-center">
+      {/* Bottom Navigation - FIXED BOTTOM STYLE */}
+      <nav className="fixed bottom-0 left-0 right-0 bg-white dark:bg-matrix-950 border-t border-slate-200 dark:border-slate-800 z-50 pb-6 pt-3 shadow-[0_-4px_20px_-10px_rgba(0,0,0,0.1)]">
+        <div className="grid grid-cols-5 items-center max-w-lg mx-auto">
             
             {!petProfile ? (
                 <button 
                     onClick={() => changeView('home')}
-                    className={`flex flex-col items-center gap-1.5 transition-all duration-300 relative ${isHomeActive ? 'text-matrix-600 dark:text-matrix-400 -translate-y-1' : 'text-slate-400 dark:text-slate-500 hover:text-slate-600'}`}
+                    className={`flex flex-col items-center gap-1 transition-all duration-200 ${isHomeActive ? 'text-matrix-600 dark:text-matrix-400' : 'text-slate-400 dark:text-slate-500 hover:text-slate-600'}`}
                 >
                     <div className={`p-1.5 rounded-xl ${isHomeActive ? 'bg-matrix-50 dark:bg-matrix-900' : ''}`}>
                         <PlusCircle size={24} strokeWidth={isHomeActive ? 2.5 : 2} />
                     </div>
-                    <span className={`text-[9px] font-bold ${isHomeActive ? 'opacity-100' : 'opacity-70'}`}>Kayıt</span>
+                    <span className={`text-[10px] font-bold ${isHomeActive ? 'opacity-100' : 'opacity-70'}`}>Kayıt</span>
                 </button>
             ) : (
                 <button 
                     onClick={() => changeView('info')}
-                    className={`flex flex-col items-center gap-1.5 transition-all duration-300 relative ${isInfoActive ? 'text-matrix-600 dark:text-matrix-400 -translate-y-1' : 'text-slate-400 dark:text-slate-500 hover:text-slate-600'}`}
+                    className={`flex flex-col items-center gap-1 transition-all duration-200 ${isInfoActive ? 'text-matrix-600 dark:text-matrix-400' : 'text-slate-400 dark:text-slate-500 hover:text-slate-600'}`}
                 >
                     <div className={`p-1.5 rounded-xl ${isInfoActive ? 'bg-matrix-50 dark:bg-matrix-900' : ''}`}>
                         <FileText size={24} strokeWidth={isInfoActive ? 2.5 : 2} />
                     </div>
-                    <span className={`text-[9px] font-bold ${isInfoActive ? 'opacity-100' : 'opacity-70'}`}>Bilgiler</span>
+                    <span className={`text-[10px] font-bold ${isInfoActive ? 'opacity-100' : 'opacity-70'}`}>Bilgiler</span>
                 </button>
             )}
 
             <button 
                  onClick={() => petProfile ? changeView('lost') : alert("Önce hayvan kaydı yapmalısınız.")}
-                 className={`flex flex-col items-center gap-1.5 transition-all duration-300 relative ${isLostActive ? 'text-red-600 dark:text-red-500 -translate-y-1' : 'text-slate-400 dark:text-slate-500 hover:text-red-500'}`}
+                 className={`flex flex-col items-center gap-1 transition-all duration-200 ${isLostActive ? 'text-red-600 dark:text-red-500' : 'text-slate-400 dark:text-slate-500 hover:text-red-500'}`}
             >
                 <div className={`p-1.5 rounded-xl ${isLostActive ? 'bg-red-50 dark:bg-red-900/30' : ''}`}>
                     <Siren size={24} strokeWidth={isLostActive ? 2.5 : 2} className={petProfile?.lostStatus?.isActive ? "animate-pulse" : ""} />
@@ -362,7 +362,7 @@ const App: React.FC = () => {
             
             <button 
                 onClick={() => changeView('settings')}
-                className={`flex flex-col items-center gap-1.5 transition-all duration-300 relative ${isSettingsActive ? 'text-matrix-600 dark:text-matrix-400 -translate-y-1' : 'text-slate-400 dark:text-slate-500 hover:text-slate-600'}`}
+                className={`flex flex-col items-center gap-1 transition-all duration-200 ${isSettingsActive ? 'text-matrix-600 dark:text-matrix-400' : 'text-slate-400 dark:text-slate-500 hover:text-slate-600'}`}
             >
                 <div className={`p-1.5 rounded-xl ${isSettingsActive ? 'bg-matrix-50 dark:bg-matrix-900' : ''}`}>
                     <SettingsIcon size={24} strokeWidth={isSettingsActive ? 2.5 : 2} />
@@ -372,7 +372,7 @@ const App: React.FC = () => {
 
             <button 
                 onClick={() => changeView('about')}
-                className={`flex flex-col items-center gap-1.5 transition-all duration-300 relative ${isAboutActive ? 'text-matrix-600 dark:text-matrix-400 -translate-y-1' : 'text-slate-400 dark:text-slate-500 hover:text-slate-600'}`}
+                className={`flex flex-col items-center gap-1 transition-all duration-200 ${isAboutActive ? 'text-matrix-600 dark:text-matrix-400' : 'text-slate-400 dark:text-slate-500 hover:text-slate-600'}`}
             >
                  <div className={`p-1.5 rounded-xl ${isAboutActive ? 'bg-matrix-50 dark:bg-matrix-900' : ''}`}>
                     <Info size={24} strokeWidth={isAboutActive ? 2.5 : 2} />
@@ -382,7 +382,7 @@ const App: React.FC = () => {
 
             <button 
                 onClick={handleLogout}
-                className="flex flex-col items-center gap-1.5 transition-all duration-300 text-slate-300 hover:text-red-500 dark:text-slate-600 dark:hover:text-red-400"
+                className="flex flex-col items-center gap-1 transition-all duration-200 text-slate-300 hover:text-red-500 dark:text-slate-600 dark:hover:text-red-400"
             >
                 <div className="p-1.5">
                     <LogOut size={24} strokeWidth={2} />
