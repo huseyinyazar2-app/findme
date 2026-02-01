@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { PetProfile, LostStatus, UserProfile } from '../types';
-import { Siren, MapPin, Save, Info, Lock, Unlock, Hand, ShieldCheck, KeyRound, CheckCircle2, Navigation, AlertTriangle, Radar } from 'lucide-react';
+import { Siren, MapPin, Save, Info, Lock, Unlock, Hand, ShieldCheck, KeyRound, CheckCircle2, Navigation, AlertTriangle, Radar, FileCheck } from 'lucide-react';
 import { Input } from './ui/Input';
 import L from 'leaflet';
 
@@ -46,6 +46,9 @@ export const LostMode: React.FC<LostModeProps> = ({ user, pet, onSavePet, setHas
   const [isMapInteractive, setIsMapInteractive] = useState(false);
   const [showActiveModal, setShowActiveModal] = useState(false);
   const [showSafeModal, setShowSafeModal] = useState(false);
+  
+  // KVKK Consent State
+  const [consentGiven, setConsentGiven] = useState(false);
   
   const mapRef = useRef<HTMLDivElement>(null);
   const leafletMap = useRef<L.Map | null>(null);
@@ -145,7 +148,8 @@ export const LostMode: React.FC<LostModeProps> = ({ user, pet, onSavePet, setHas
     setIsActive(newState);
     if (newState) {
         getUserLocation();
-        setPassword(''); 
+        setPassword('');
+        setConsentGiven(false); // Reset consent when activating
     } else {
         setIsMapInteractive(false);
     }
@@ -338,6 +342,25 @@ export const LostMode: React.FC<LostModeProps> = ({ user, pet, onSavePet, setHas
                         onChange={(e) => setMessage(e.target.value)}
                       />
                   </div>
+
+                  {/* --- CONSENT CHECKBOX (KVKK) --- */}
+                  <div className="p-4 bg-slate-100 dark:bg-slate-800/60 rounded-2xl border border-slate-200 dark:border-slate-700 flex gap-3 items-start transition-colors hover:bg-slate-50 dark:hover:bg-slate-800">
+                        <div className="relative flex items-center">
+                            <input
+                                type="checkbox"
+                                id="kvkk-consent"
+                                checked={consentGiven}
+                                onChange={(e) => setConsentGiven(e.target.checked)}
+                                className="peer h-5 w-5 cursor-pointer appearance-none rounded-lg border border-slate-400 checked:bg-red-600 checked:border-red-600 transition-all dark:border-slate-500"
+                            />
+                            <div className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-white opacity-0 peer-checked:opacity-100">
+                                <CheckCircle2 size={14} strokeWidth={4} />
+                            </div>
+                        </div>
+                        <label htmlFor="kvkk-consent" className="text-xs text-slate-600 dark:text-slate-300 font-medium leading-relaxed cursor-pointer select-none">
+                            Kayıp durumu süresince; <strong className="text-slate-800 dark:text-white">konum, iletişim ve evcil hayvan bilgilerimin</strong> herkese açık olarak paylaşılmasını onaylıyorum. <span className="underline decoration-slate-400 underline-offset-2">KVKK Aydınlatma Metni</span>'ni okudum ve kabul ediyorum.
+                        </label>
+                  </div>
               </div>
           )}
 
@@ -374,17 +397,20 @@ export const LostMode: React.FC<LostModeProps> = ({ user, pet, onSavePet, setHas
               <div className="fixed bottom-24 left-4 right-4 z-40 animate-in slide-in-from-bottom-2 fade-in">
                  <button 
                     onClick={handleSave}
-                    disabled={!isActive && !password && pet.lostStatus?.isActive}
+                    // Disable logic: 
+                    // 1. If turning OFF safe mode (!isActive) AND password is empty.
+                    // 2. If turning ON active mode (isActive) AND consent is NOT given.
+                    disabled={(!isActive && !password && pet.lostStatus?.isActive) || (isActive && !consentGiven)}
                     className={`
                         w-full py-4 rounded-2xl shadow-2xl flex items-center justify-center gap-3 active:scale-95 transition-all font-black text-white text-lg
-                        disabled:opacity-50 disabled:cursor-not-allowed
+                        disabled:opacity-50 disabled:cursor-not-allowed disabled:grayscale
                         ${isActive 
                             ? 'bg-gradient-to-r from-red-600 to-rose-600 shadow-red-500/40' 
                             : 'bg-gradient-to-r from-emerald-600 to-teal-600 shadow-emerald-500/40'}
                     `}
                   >
-                      {isActive ? <Save size={24} /> : <ShieldCheck size={24} />}
-                      {isActive ? 'BİLDİRİMİ GÜNCELLE' : 'GÜVENLİ OLARAK İŞARETLE'}
+                      {isActive ? <FileCheck size={24} /> : <ShieldCheck size={24} />}
+                      {isActive ? 'BİLDİRİMİ ONAYLA' : 'GÜVENLİ OLARAK İŞARETLE'}
                   </button>
               </div>
           )}
