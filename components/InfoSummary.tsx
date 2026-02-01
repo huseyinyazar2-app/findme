@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { UserProfile, PetProfile, PetType } from '../types';
 import { TURKEY_CITIES, CITY_NAMES, TEMPERAMENT_OPTIONS, formatPhoneNumber } from '../constants';
-import { Edit2, Check, X, User, Dog, MapPin, Phone, ShieldAlert, FileText, Info, CheckCircle2, Camera } from 'lucide-react';
+import { Edit2, Check, X, User, Dog, MapPin, Phone, ShieldAlert, FileText, Info, CheckCircle2, Camera, QrCode } from 'lucide-react';
 
 // --- Extracted Component: FieldEditor ---
 interface FieldEditorProps {
@@ -354,9 +354,12 @@ export const InfoSummary: React.FC<InfoSummaryProps> = ({ user, pet, onUpdateUse
             <h2 className="text-2xl font-black text-slate-800 dark:text-white tracking-tight">
                 Kayıtlı Bilgiler
             </h2>
-            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
-                Profil ve evcil hayvan detayları
-            </p>
+            <div className="flex items-center gap-1.5 mt-0.5">
+                <QrCode size={12} className="text-matrix-600 dark:text-matrix-400" />
+                <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                    QR ID: <span className="text-slate-900 dark:text-white bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded ml-1 border border-slate-200 dark:border-slate-700">{user.username}</span>
+                </span>
+            </div>
         </div>
       </div>
 

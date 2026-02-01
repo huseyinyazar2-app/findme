@@ -252,10 +252,10 @@ export const LostMode: React.FC<LostModeProps> = ({ user, pet, onSavePet, setHas
                       `}
                   >
                       <span className={`absolute left-0 w-full text-center text-[10px] font-bold tracking-[0.2em] uppercase transition-opacity duration-300 ${isActive ? 'opacity-0' : 'text-white/70 opacity-100'}`}>
-                          Kaydır &rarr; Aktif Et
+                          Kaydır &rarr; Kayıp İlanı Ver
                       </span>
                        <span className={`absolute left-0 w-full text-center text-[10px] font-bold tracking-[0.2em] uppercase transition-opacity duration-300 ${isActive ? 'text-white/70 opacity-100' : 'opacity-0'}`}>
-                          Kapatmak İçin &larr;
+                          Kayıp İlanını Durdur &larr;
                       </span>
 
                       <div className={`
