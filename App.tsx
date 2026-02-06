@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { Login } from './components/Login';
 import { PetForm } from './components/PetForm';
@@ -7,8 +8,8 @@ import { LostMode } from './components/LostMode';
 import { About } from './components/About';
 import { FinderView } from './components/FinderView';
 import { UserProfile, PetProfile } from './types';
-import { Settings as SettingsIcon, LogOut, FileText, PlusCircle, Siren, Info, RefreshCw, QrCode, MapPin, Loader2, Bell, XCircle, AlertTriangle } from 'lucide-react';
-import { loginOrRegister, getPetForUser, savePetForUser, updateUserProfile, checkQRCode, getPublicPetByQr, supabase, logQrScan, getRecentQrScans } from './services/dbService';
+import { Settings as SettingsIcon, LogOut, FileText, PlusCircle, Siren, Info, RefreshCw, QrCode, MapPin, Loader2, Bell, XCircle, AlertTriangle, ShieldCheck, UserCheck } from 'lucide-react';
+import { loginOrRegister, getPetForUser, savePetForUser, updateUserProfile, checkQRCode, getPublicPetByQr, supabase, logQrScan, updateQrLogLocation, getRecentQrScans } from './services/dbService';
 import { APP_VERSION } from './constants';
 
 const App: React.FC = () => {
@@ -30,10 +31,13 @@ const App: React.FC = () => {
   const [qrCode, setQrCode] = useState<string | null>(null);
   const [qrMessage, setQrMessage] = useState<string>('');
   
-  // Scan Overlay State (For Permission)
-  const [showScanOverlay, setShowScanOverlay] = useState(false);
+  // LOGIC STATES
+  const [showLostSelectionModal, setShowLostSelectionModal] = useState(false); // New Modal for Lost Pets
+  const [showScanOverlay, setShowScanOverlay] = useState(false); // Location Permission Overlay
   const [isScanning, setIsScanning] = useState(false);
-  const scanProcessed = useRef(false); 
+  
+  // LOGGING STATE
+  const [currentLogId, setCurrentLogId] = useState<string | null>(null); 
 
   // Owner Alert State (Log Notification)
   const [recentScans, setRecentScans] = useState<any[]>([]);
@@ -82,31 +86,42 @@ const App: React.FC = () => {
             const code = qrMatch[1];
             setQrCode(code);
             
-            // --- NEW LOGIC: Check status BEFORE showing overlay ---
-            // If Lost -> Show Overlay (Ask Location)
-            // If Not Lost -> Silent Log + Show Login
-            
+            // --- NEW LOGIC: Check Status FIRST ---
             const petCheck = await getPublicPetByQr(code);
-            
-            if (petCheck && petCheck.lostStatus?.isActive) {
-                // Pet is LOST! We need location permission. Show Overlay.
-                setShowScanOverlay(true);
-            } else {
-                // Pet is NOT LOST or NOT REGISTERED.
-                // Log silently (background) without location.
-                logQrScan(code, undefined); 
+            const isLost = petCheck && petCheck.lostStatus?.isActive;
+
+            if (isLost) {
+                // If Lost: STOP everything. Prepare data but don't show it yet.
+                // Ask user: "Are you the finder or the owner?"
+                setFinderPet(petCheck);
                 
-                // Proceed to standard QR checks for Login/Register flow
-                const check = await checkQRCode(code);
-                if (check.valid) {
-                    if (check.status === 'boş') {
-                        setQrMessage('Yeni etiket! Kayıt oluşturmak için paketten çıkan PIN kodunu giriniz.');
-                    } else {
-                        setQrMessage('Kayıtlı etiket. Yönetim paneli için PIN kodunu giriniz.');
-                    }
-                } else {
-                    setQrMessage('Geçersiz veya Tanımsız QR Kod.');
+                // Fetch Owner Data silently in background
+                const { data: ownerData } = await supabase
+                    .from('Find_Users')
+                    .select('*')
+                    .eq('username', code)
+                    .single();
+                
+                if (ownerData) {
+                    setFinderOwner({
+                        username: ownerData.username,
+                        email: ownerData.email,
+                        phone: ownerData.phone,
+                        fullName: ownerData.full_name,
+                        contactPreference: ownerData.contact_preference,
+                        emergencyContactName: ownerData.emergency_contact_name,
+                        emergencyContactEmail: ownerData.emergency_contact_email,
+                        emergencyContactPhone: ownerData.emergency_contact_phone,
+                        isEmailVerified: false 
+                    } as UserProfile);
                 }
+
+                // Show the Selection Modal
+                setShowLostSelectionModal(true);
+            } else {
+                // Not Lost (Safe or Empty): Proceed to Standard Login/Check
+                // NO LOGGING HERE.
+                proceedToStandardFlow(code);
             }
 
         } else {
@@ -117,6 +132,20 @@ const App: React.FC = () => {
 
     initApp();
   }, []);
+
+  const proceedToStandardFlow = async (code: string) => {
+      const check = await checkQRCode(code);
+      if (check.valid) {
+          if (check.status === 'boş') {
+              setQrMessage('Yeni etiket! Kayıt oluşturmak için paketten çıkan PIN kodunu giriniz.');
+          } else {
+              setQrMessage('Kayıtlı etiket. Yönetim paneli için PIN kodunu giriniz.');
+          }
+      } else {
+          setQrMessage('Geçersiz veya Tanımsız QR Kod.');
+      }
+      checkSession();
+  };
 
   const checkSession = async (ignoreQrMismatch = false) => {
         const savedUserStr = localStorage.getItem('matrixc_user_session');
@@ -146,22 +175,42 @@ const App: React.FC = () => {
   const fetchScansForOwner = async (username: string) => {
       // Only fetch logs if user is the owner
       const logs = await getRecentQrScans(username);
-      // Filter out logs that are older than 1 year or handle logic as needed. 
-      // For now, if there are logs, we show them. 
       if (logs && logs.length > 0) {
           setRecentScans(logs);
           setShowScanAlert(true);
       }
   };
 
-  // --- Manual Scan Trigger (Only for LOST pets) ---
-  const handleStartScan = async () => {
-      if (!qrCode || isScanning || scanProcessed.current) return;
-      
-      setIsScanning(true);
-      scanProcessed.current = true; // Prevent double clicks
+  // --- USER CHOICES ---
 
-      // 1. Try to get Location (User interaction allows this now)
+  // 1. Finder Action: "I Found It"
+  const handleFinderAction = async () => {
+      if (!qrCode) return;
+      setShowLostSelectionModal(false); // Close selection modal
+      
+      // LOG NOW (IP/Device Only first)
+      const logId = await logQrScan(qrCode);
+      if (logId) setCurrentLogId(logId);
+
+      // Show Location Permission Overlay
+      setShowScanOverlay(true);
+  };
+
+  // 2. Owner Action: "I am Owner"
+  const handleOwnerAction = () => {
+      setShowLostSelectionModal(false);
+      // Proceed to login without logging anything
+      if (qrCode) {
+        proceedToStandardFlow(qrCode);
+      }
+  };
+
+  // --- Manual Scan Trigger (Updates Location) ---
+  const handleStartLocationScan = async () => {
+      if (isScanning) return;
+      setIsScanning(true);
+
+      // 1. Try to get Location
       let locationData = undefined;
       
       try {
@@ -178,41 +227,18 @@ const App: React.FC = () => {
               lng: position.coords.longitude,
               accuracy: position.coords.accuracy
           };
+
+          // 2. Update the existing log with location
+          if (currentLogId && locationData) {
+              await updateQrLogLocation(currentLogId, locationData);
+          } 
+
       } catch (e) {
           console.warn("Konum izni verilmedi veya hata:", e);
       }
 
-      // 2. Log Data with Location
-      await logQrScan(qrCode, locationData);
-
-      // 3. Process Logic (Show Finder View)
-      const publicPet = await getPublicPetByQr(qrCode);
-            
-      if (publicPet && publicPet.lostStatus?.isActive) {
-            setIsFinderMode(true);
-            setFinderPet(publicPet);
-            
-            const { data: ownerData } = await supabase
-                .from('Find_Users')
-                .select('*')
-                .eq('username', qrCode)
-                .single();
-            
-            if (ownerData) {
-                    setFinderOwner({
-                        username: ownerData.username,
-                        email: ownerData.email,
-                        phone: ownerData.phone,
-                        fullName: ownerData.full_name,
-                        contactPreference: ownerData.contact_preference,
-                        emergencyContactName: ownerData.emergency_contact_name,
-                        emergencyContactEmail: ownerData.emergency_contact_email,
-                        emergencyContactPhone: ownerData.emergency_contact_phone,
-                        isEmailVerified: false 
-                    } as UserProfile);
-            }
-      }
-
+      // 3. Show Finder View
+      setIsFinderMode(true);
       setIsScanning(false);
       setShowScanOverlay(false);
   };
@@ -307,41 +333,102 @@ const App: React.FC = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // --- RENDER SCAN OVERLAY (Only if Lost) ---
+  // --- RENDER: LOST SELECTION MODAL (NEW) ---
+  if (showLostSelectionModal) {
+      return (
+        <div className="fixed inset-0 bg-slate-900 z-[9999] flex flex-col items-center justify-center p-6 animate-in fade-in duration-500">
+            {/* Background Animations */}
+            <div className="absolute top-0 left-0 w-full h-1/2 bg-gradient-to-b from-red-900/40 to-transparent pointer-events-none"></div>
+            <div className="absolute w-[200vw] h-[200vw] bg-red-600/10 rounded-full animate-pulse pointer-events-none blur-3xl"></div>
+            
+            <div className="relative w-full max-w-sm bg-white dark:bg-slate-800 rounded-3xl p-8 shadow-2xl text-center space-y-8 animate-in zoom-in-95 duration-500 border border-red-500/30">
+                
+                {/* Siren Icon */}
+                <div className="relative w-28 h-28 mx-auto">
+                    <div className="absolute inset-0 bg-red-500 rounded-full animate-ping opacity-20 duration-1000"></div>
+                    <div className="absolute inset-2 bg-red-500 rounded-full animate-ping opacity-40 delay-75 duration-1000"></div>
+                    <div className="relative bg-gradient-to-br from-red-500 to-red-700 rounded-full w-full h-full flex items-center justify-center text-white shadow-lg shadow-red-500/50">
+                        <Siren size={48} className="animate-wiggle" />
+                    </div>
+                </div>
+                
+                <div className="space-y-2">
+                    <h2 className="text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
+                        Kayıp Alarmı
+                    </h2>
+                    <p className="text-slate-600 dark:text-slate-300 font-medium leading-relaxed">
+                        Bu evcil hayvan için <strong className="text-red-500">KAYIP İLANI</strong> verilmiş. Lütfen durumunuzu seçin.
+                    </p>
+                </div>
+
+                <div className="space-y-4">
+                    {/* BUTTON 1: FINDER */}
+                    <button 
+                        onClick={handleFinderAction}
+                        className="w-full group relative overflow-hidden bg-red-600 hover:bg-red-700 text-white py-4 px-6 rounded-2xl shadow-xl shadow-red-500/30 transition-all active:scale-95"
+                    >
+                        <div className="flex items-center justify-center gap-3 relative z-10">
+                            <ShieldCheck size={24} />
+                            <div className="text-left">
+                                <span className="block text-xs font-bold opacity-80 uppercase tracking-wider">Yardımcı Ol</span>
+                                <span className="block text-lg font-black leading-none">BULDUM / GÖRDÜM</span>
+                            </div>
+                        </div>
+                    </button>
+
+                    <div className="relative flex py-1 items-center">
+                        <div className="flex-grow border-t border-slate-200 dark:border-slate-700"></div>
+                        <span className="flex-shrink-0 mx-4 text-xs font-bold text-slate-400 uppercase">veya</span>
+                        <div className="flex-grow border-t border-slate-200 dark:border-slate-700"></div>
+                    </div>
+
+                    {/* BUTTON 2: OWNER */}
+                    <button 
+                        onClick={handleOwnerAction}
+                        className="w-full bg-white dark:bg-slate-700 border-2 border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-200 py-3.5 px-6 rounded-2xl font-bold hover:bg-slate-50 dark:hover:bg-slate-600 transition-all active:scale-95 flex items-center justify-center gap-2"
+                    >
+                        <UserCheck size={20} />
+                        Sahibiyim, Giriş Yap
+                    </button>
+                </div>
+            </div>
+            
+            <p className="mt-8 text-slate-500 dark:text-slate-400 text-xs font-medium text-center max-w-xs opacity-70">
+                Not: "Buldum" seçeneği, sahibine yardımcı olabilmek için konum ve cihaz bilgilerinizi paylaşır.
+            </p>
+        </div>
+      );
+  }
+
+  // --- RENDER: LOCATION OVERLAY (Only for Finders) ---
   if (showScanOverlay) {
       return (
-          <div className="fixed inset-0 bg-slate-900 flex flex-col items-center justify-center p-6 z-[9999]">
+          <div className="fixed inset-0 bg-slate-900 z-[9999] flex flex-col items-center justify-center p-6">
               <div className="w-full max-w-sm bg-white dark:bg-slate-800 rounded-3xl p-8 shadow-2xl text-center space-y-6 animate-in zoom-in-95 duration-300">
-                  <div className="relative w-24 h-24 mx-auto">
-                      <div className="absolute inset-0 bg-red-500 rounded-full animate-ping opacity-20"></div>
-                      <div className="relative bg-red-100 dark:bg-red-900/50 rounded-full w-full h-full flex items-center justify-center text-red-600 dark:text-red-400">
-                          <Siren size={40} className="animate-pulse" />
+                  <div className="relative w-20 h-20 mx-auto">
+                      <div className="relative bg-blue-100 dark:bg-blue-900/50 rounded-full w-full h-full flex items-center justify-center text-blue-600 dark:text-blue-400">
+                          <MapPin size={32} />
                       </div>
                   </div>
                   
                   <div>
-                      <h2 className="text-2xl font-black text-slate-900 dark:text-white mb-2">Kayıp Alarmı!</h2>
+                      <h2 className="text-2xl font-black text-slate-900 dark:text-white mb-2">Konum İzni</h2>
                       <p className="text-sm text-slate-500 dark:text-gray-400 font-medium leading-relaxed">
-                          Bu evcil hayvan için kayıp ilanı verilmiş. Sahibine yardımcı olmak için lütfen konum iznini onaylayın.
+                          Evcil hayvanın sahibine tam konumunuzu iletmek, kavuşmayı hızlandıracaktır.
                       </p>
                   </div>
 
-                  <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-xl text-xs text-blue-700 dark:text-blue-300 font-bold flex items-center gap-2 text-left">
-                      <MapPin size={24} className="shrink-0" />
-                      Konum bilgisi sadece hayvan sahibine iletilecektir.
-                  </div>
-
                   <button 
-                    onClick={handleStartScan}
+                    onClick={handleStartLocationScan}
                     disabled={isScanning}
-                    className="w-full py-4 bg-gradient-to-r from-red-600 to-red-700 text-white rounded-xl font-bold shadow-lg shadow-red-500/30 flex items-center justify-center gap-2 active:scale-95 transition-all"
+                    className="w-full py-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl font-bold shadow-lg shadow-blue-500/30 flex items-center justify-center gap-2 active:scale-95 transition-all"
                   >
                       {isScanning ? (
                           <>
-                            <Loader2 className="animate-spin" /> İşleniyor...
+                            <Loader2 className="animate-spin" /> Konum Alınıyor...
                           </>
                       ) : (
-                          "Yardımcı Ol & Bilgileri Gör"
+                          "Konumumu Paylaş & Bilgileri Gör"
                       )}
                   </button>
               </div>
