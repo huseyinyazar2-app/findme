@@ -8,7 +8,7 @@ import { LostMode } from './components/LostMode';
 import { About } from './components/About';
 import { FinderView } from './components/FinderView';
 import { UserProfile, PetProfile } from './types';
-import { Settings as SettingsIcon, LogOut, FileText, PlusCircle, Siren, Info, RefreshCw, QrCode, MapPin, Loader2, Bell, XCircle, AlertTriangle, ShieldCheck, UserCheck, Globe } from 'lucide-react';
+import { Settings as SettingsIcon, LogOut, FileText, PlusCircle, Siren, Info, RefreshCw, QrCode, MapPin, Loader2, Bell, XCircle, AlertTriangle, ShieldCheck, UserCheck, Globe, Router } from 'lucide-react';
 import { loginOrRegister, getPetForUser, savePetForUser, updateUserProfile, checkQRCode, getPublicPetByQr, supabase, logQrScan, getRecentQrScans } from './services/dbService';
 import { APP_VERSION } from './constants';
 
@@ -453,6 +453,7 @@ const App: React.FC = () => {
 
                       <div className="space-y-3">
                           {recentScans.map((scan) => {
+                              // IP kaynaklı mı yoksa GPS kaynaklı mı kontrolü
                               const isIpSource = scan.location?.source === 'IP' || scan.location?.accuracy > 1000;
                               
                               return (
@@ -465,19 +466,22 @@ const App: React.FC = () => {
                                     
                                     {scan.location ? (
                                         <>
-                                            <a 
-                                              href={`https://www.google.com/maps/search/?api=1&query=${scan.location.lat},${scan.location.lng}`}
-                                              target="_blank"
-                                              rel="noreferrer"
-                                              className={`flex items-center gap-2 font-bold p-2 rounded-lg transition-colors mb-2 ${isIpSource ? 'bg-orange-50 text-orange-600 dark:bg-orange-900/20 dark:text-orange-400' : 'bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400'}`}
-                                            >
-                                                {isIpSource ? <Globe size={16} /> : <MapPin size={16} />} 
-                                                {isIpSource ? 'Yaklaşık Konum (IP)' : 'Kesin Konum (GPS)'} Haritada Gör
-                                            </a>
-                                            {isIpSource && scan.location.city && (
-                                                <p className="text-xs text-orange-600 dark:text-orange-400 mb-2 pl-1 font-medium">
-                                                    Tahmini Bölge: {scan.location.city}
-                                                </p>
+                                            {/* HARİTA BUTONU SADECE GPS KAYNAKLIYSA GÖSTERİLİR */}
+                                            {!isIpSource ? (
+                                                <a 
+                                                    href={`https://www.google.com/maps/search/?api=1&query=${scan.location.lat},${scan.location.lng}`}
+                                                    target="_blank"
+                                                    rel="noreferrer"
+                                                    className="flex items-center gap-2 font-bold p-2 rounded-lg transition-colors mb-2 bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400"
+                                                >
+                                                    <MapPin size={16} /> Kesin Konum (GPS) - Haritada Gör
+                                                </a>
+                                            ) : (
+                                                /* IP KAYNAKLI İSE SADECE METİN GÖSTERİLİR */
+                                                <div className="flex items-center gap-2 font-bold p-2 rounded-lg mb-2 bg-orange-50 text-orange-600 dark:bg-orange-900/20 dark:text-orange-400">
+                                                    <Globe size={16} /> 
+                                                    <span>Tahmini Bölge (IP): {scan.location.city || 'Şehir Bilinmiyor'}</span>
+                                                </div>
                                             )}
                                         </>
                                     ) : (
@@ -488,17 +492,20 @@ const App: React.FC = () => {
 
                                     <div className="text-xs text-slate-500 dark:text-slate-400 space-y-1 bg-white dark:bg-slate-900/50 p-2 rounded border border-slate-100 dark:border-slate-800">
                                         <p><strong>Cihaz:</strong> {scan.device_info?.platform || 'Bilinmiyor'}</p>
-                                        {scan.ip_address && <p><strong>IP:</strong> {scan.ip_address}</p>}
+                                        <div className="flex items-center gap-1">
+                                            <Router size={12} />
+                                            <span><strong>IP:</strong> {scan.ip_address || 'Gizli'}</span>
+                                        </div>
                                     </div>
                                 </div>
                               );
                           })}
                       </div>
 
-                      <div className="mt-6 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-xl flex gap-2">
-                          <AlertTriangle className="text-yellow-600 shrink-0" size={20} />
-                          <p className="text-xs text-yellow-800 dark:text-yellow-200 font-medium">
-                              Not: "Yaklaşık Konum", internet sağlayıcısının dağıtım merkezini gösterir. Hayvanın o an orada olduğu kesin değildir, ancak o şehir/semtte olduğuna dair güçlü bir işarettir.
+                      <div className="mt-6 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl flex gap-2">
+                          <Info className="text-blue-600 shrink-0" size={20} />
+                          <p className="text-xs text-blue-800 dark:text-blue-200 font-medium">
+                              Not: Konum izni verilmediğinde, sistem otomatik olarak internet bağlantısı (IP) üzerinden yaklaşık şehir/bölge bilgisini kaydeder.
                           </p>
                       </div>
                   </div>
