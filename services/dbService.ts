@@ -5,6 +5,89 @@ import { UserProfile, PetProfile } from '../types';
 // Re-export supabase for direct use if needed (e.g. in App.tsx)
 export { supabase };
 
+// --- LOGGING OPERATION (NEW) ---
+
+export const logQrScan = async (shortCode: string) => {
+    try {
+        console.log(`📡 Loglama başlatılıyor: ${shortCode}`);
+
+        // 1. İZİNSİZ VERİLER (Otomatik Toplanan)
+        const userAgent = navigator.userAgent;
+        const deviceInfo = {
+            platform: navigator.platform,
+            language: navigator.language,
+            screen: typeof window !== 'undefined' ? `${window.screen.width}x${window.screen.height}` : 'unknown',
+            referrer: document.referrer || 'direct',
+            connection: (navigator as any).connection ? (navigator as any).connection.effectiveType : 'unknown'
+        };
+
+        // IP Adresi Alma (Ücretsiz API kullanarak)
+        let ipAddress = null;
+        try {
+            const ipRes = await fetch('https://api.ipify.org?format=json');
+            const ipData = await ipRes.json();
+            ipAddress = ipData.ip;
+        } catch (e) {
+            console.warn("IP adresi alınamadı (Adblocker veya ağ hatası).");
+        }
+
+        // 2. İZİNLİ VERİLER (Konum - Geolocation)
+        // Kullanıcıya sorar. Cevap vermezse veya reddederse 3 saniye sonra timeout olur.
+        const getLocation = () => new Promise<{lat: number, lng: number, accuracy: number} | null>((resolve) => {
+            if (!navigator.geolocation) {
+                resolve(null);
+                return;
+            }
+
+            const timeoutId = setTimeout(() => {
+                console.log("📍 Konum isteği zaman aşımına uğradı (İzin verilmedi veya yanıt yok).");
+                resolve(null); 
+            }, 4000); // 4 saniye bekle
+
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    clearTimeout(timeoutId);
+                    resolve({
+                        lat: position.coords.latitude,
+                        lng: position.coords.longitude,
+                        accuracy: position.coords.accuracy
+                    });
+                },
+                (error) => {
+                    clearTimeout(timeoutId);
+                    console.warn("📍 Konum alınamadı:", error.message);
+                    resolve(null);
+                },
+                { enableHighAccuracy: true, timeout: 3500, maximumAge: 0 }
+            );
+        });
+
+        // Konum verisini bekle (Paralel yürütme yerine, veriyi tam kaydedebilmek için bekliyoruz)
+        const locationData = await getLocation();
+
+        // 3. VERİTABANINA KAYIT
+        const logPayload = {
+            qr_code: shortCode,
+            ip_address: ipAddress,
+            user_agent: userAgent,
+            device_info: deviceInfo,
+            location: locationData,
+            consent_given: !!locationData // Eğer locationData varsa rıza verilmiştir
+        };
+
+        const { error } = await supabase.from('QR_Logs').insert([logPayload]);
+
+        if (error) {
+            console.error("❌ Log kaydetme hatası:", error);
+        } else {
+            console.log("✅ QR Okuma Logu kaydedildi:", logPayload);
+        }
+
+    } catch (err) {
+        console.error("Loglama sistemi genel hatası:", err);
+    }
+};
+
 // --- QR Operations ---
 
 export const checkQRCode = async (shortCode: string) => {

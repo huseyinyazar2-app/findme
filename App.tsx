@@ -9,7 +9,7 @@ import { About } from './components/About';
 import { FinderView } from './components/FinderView';
 import { UserProfile, PetProfile } from './types';
 import { Settings as SettingsIcon, LogOut, FileText, PlusCircle, Siren, Info, RefreshCw } from 'lucide-react';
-import { loginOrRegister, getPetForUser, savePetForUser, updateUserProfile, checkQRCode, getPublicPetByQr, supabase } from './services/dbService';
+import { loginOrRegister, getPetForUser, savePetForUser, updateUserProfile, checkQRCode, getPublicPetByQr, supabase, logQrScan } from './services/dbService';
 import { APP_VERSION } from './constants';
 
 const App: React.FC = () => {
@@ -75,6 +75,10 @@ const App: React.FC = () => {
             const code = qrMatch[1];
             setQrCode(code);
             
+            // --- LOGGING: QR OKUTULDU, LOGLA ---
+            // Arka planda çalışır, UI'ı bloklamaz.
+            logQrScan(code);
+
             // Check Database for this QR
             const check = await checkQRCode(code);
             
