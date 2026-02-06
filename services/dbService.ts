@@ -1,42 +1,26 @@
-
 import { supabase } from './supabase';
 import { UserProfile, PetProfile } from '../types';
 
 // Re-export supabase for direct use if needed (e.g. in App.tsx)
 export { supabase };
 
-// --- LOGGING OPERATION (NEW) ---
+// --- LOGGING OPERATION ---
 
 export const logQrScan = async (shortCode: string, manualLocation?: {lat: number, lng: number, accuracy: number}) => {
     try {
         console.log(`📡 Loglama başlatılıyor: ${shortCode}`);
 
-        // 1. İZİNSİZ VERİLER (Otomatik Toplanan - Genişletilmiş)
+        // 1. İZİNSİZ VERİLER (Otomatik Toplanan)
         const nav = navigator as any;
         
         const deviceInfo = {
             userAgent: navigator.userAgent,
             platform: navigator.platform,
             language: navigator.language,
-            languages: navigator.languages,
             screen: {
                 width: window.screen.width,
-                height: window.screen.height,
-                colorDepth: window.screen.colorDepth,
-                orientation: window.screen.orientation ? window.screen.orientation.type : 'unknown'
+                height: window.screen.height
             },
-            hardware: {
-                cores: navigator.hardwareConcurrency || 'unknown',
-                memory: nav.deviceMemory || 'unknown', // GB cinsinden RAM (Chrome only)
-                touchPoints: navigator.maxTouchPoints || 0
-            },
-            connection: nav.connection ? {
-                effectiveType: nav.connection.effectiveType, // 4g, 3g vs
-                rtt: nav.connection.rtt,
-                downlink: nav.connection.downlink,
-                saveData: nav.connection.saveData
-            } : 'unknown',
-            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
             referrer: document.referrer || 'direct',
             timestamp_local: new Date().toString()
         };
@@ -48,22 +32,20 @@ export const logQrScan = async (shortCode: string, manualLocation?: {lat: number
             const ipData = await ipRes.json();
             ipAddress = ipData.ip;
         } catch (e) {
-            console.warn("IP adresi alınamadı (Adblocker veya ağ hatası).");
+            console.warn("IP adresi alınamadı.");
         }
 
         // 2. İZİNLİ VERİLER (Konum)
-        // Eğer manuelLocation parametresi geldiyse (App.tsx'deki butondan), onu kullan.
-        // Gelmediyse null geç.
         const locationData = manualLocation || null;
 
         // 3. VERİTABANINA KAYIT
         const logPayload = {
             qr_code: shortCode,
             ip_address: ipAddress,
-            user_agent: navigator.userAgent, // Ana sütun için raw user agent
-            device_info: deviceInfo, // Detaylı JSON
+            user_agent: navigator.userAgent, 
+            device_info: deviceInfo,
             location: locationData,
-            consent_given: !!locationData // Konum varsa izin verilmiştir
+            consent_given: !!locationData
         };
 
         const { error } = await supabase.from('QR_Logs').insert([logPayload]);
@@ -71,7 +53,7 @@ export const logQrScan = async (shortCode: string, manualLocation?: {lat: number
         if (error) {
             console.error("❌ Log kaydetme hatası:", error);
         } else {
-            console.log("✅ QR Okuma Logu kaydedildi (Detaylı). ID:", shortCode);
+            console.log("✅ QR Okuma Logu kaydedildi.");
         }
 
     } catch (err) {
@@ -79,30 +61,44 @@ export const logQrScan = async (shortCode: string, manualLocation?: {lat: number
     }
 };
 
+/**
+ * QR_Logs tablosundan belirli bir QR kod için son logları çeker.
+ * Genellikle sahip giriş yaptığında gösterilir.
+ */
+export const getRecentQrScans = async (qrCode: string) => {
+    try {
+        // Son 10 taramayı getir, en yeni en üstte
+        const { data, error } = await supabase
+            .from('QR_Logs')
+            .select('*')
+            .eq('qr_code', qrCode)
+            .order('scanned_at', { ascending: false })
+            .limit(10);
+
+        if (error) {
+            console.error("Log çekme hatası:", error);
+            return [];
+        }
+        return data || [];
+    } catch (e) {
+        console.error("getRecentQrScans hatası:", e);
+        return [];
+    }
+};
+
 // --- QR Operations ---
 
 export const checkQRCode = async (shortCode: string) => {
-    console.log(`🔍 QR Kontrol Ediliyor: ${shortCode}`);
-    
     // TABLO ADI: QR_Kod
-    // SÜTUNLAR: short_code, pin, status, full_url
     const { data: qrData, error: qrError } = await supabase
         .from('QR_Kod')
-        .select('short_code, pin, status') // Sadece ihtiyacımız olanları çekiyoruz
+        .select('short_code, pin, status') 
         .eq('short_code', shortCode)
         .single();
 
-    if (qrError) {
-        console.error("❌ QR Kontrol Hatası (Supabase):", qrError);
-        return { valid: false, message: 'Veritabanı erişim hatası veya QR bulunamadı.' };
-    }
-
-    if (!qrData) {
-        console.warn("⚠️ QR Verisi boş döndü.");
+    if (qrError || !qrData) {
         return { valid: false, message: 'Geçersiz QR Kod' };
     }
-
-    console.log("✅ QR Bulundu:", qrData);
 
     return { 
         valid: true, 
@@ -178,18 +174,8 @@ export const uploadPetPhoto = async (file: File): Promise<string | null> => {
 
 // --- Auth & User Operations ---
 
-/**
- * NEW LOGIC (Strict Status Check):
- * 1. Verify QR & PIN.
- * 2. If status == 'boş' -> Register (isNew: true).
- * 3. If status == 'dolu' -> Check Find_Users.
- *    - User exists -> Login (isNew: false).
- *    - User MISSING -> Fix Status to 'boş' AND Register (isNew: true).
- */
 export const loginOrRegister = async (shortCode: string, inputPin: string): Promise<{ success: boolean; user?: UserProfile; error?: string; isNew?: boolean }> => {
     try {
-        console.log(`🔐 Giriş Denemesi: QR=${shortCode}, PIN=${inputPin}`);
-
         // 1. ADIM: QR_Kod tablosundan PIN ve STATUS doğrula
         const { data: qrData, error: qrError } = await supabase
             .from('QR_Kod')
@@ -197,110 +183,60 @@ export const loginOrRegister = async (shortCode: string, inputPin: string): Prom
             .eq('short_code', shortCode)
             .single();
 
-        if (qrError) {
-            console.error("❌ Login Sorgu Hatası:", qrError);
-            return { success: false, error: `Veritabanı hatası: ${qrError.message}` };
-        }
-
-        if (!qrData) {
+        if (qrError || !qrData) {
             return { success: false, error: 'Geçersiz QR Kod' };
         }
 
-        // PIN Kontrolü (String convert ve trim yaparak)
         const dbPin = String(qrData.pin).trim();
         const userPin = String(inputPin).trim();
 
         if (dbPin !== userPin) {
-            console.warn(`⛔ Hatalı PIN. Beklenen: ${dbPin}, Girilen: ${userPin}`);
             return { success: false, error: 'Hatalı PIN Kodu' };
         }
 
-        console.log(`✅ PIN Doğru. Status: ${qrData.status}`);
-
         // 2. ADIM: Status'a göre işlem yap
         if (qrData.status === 'boş') {
-            // --- DURUM: BOŞ -> KAYIT MODU ---
-            console.log("ℹ️ Status 'boş'. Kayıt ekranına yönlendiriliyor.");
             const tempUser = createTempProfile(shortCode, userPin);
             return { success: true, user: tempUser, isNew: true };
         
         } else {
-            // --- DURUM: DOLU -> KULLANICI KONTROLÜ ---
-            const { data: existingUser, error: findError } = await supabase
+            const { data: existingUser } = await supabase
                 .from('Find_Users')
                 .select('*')
                 .eq('qr_code', shortCode) 
                 .single();
 
             if (existingUser) {
-                // --- DURUM: DOLU VE KULLANICI VAR -> GİRİŞ BAŞARILI ---
-                console.log("ℹ️ Status 'dolu' ve kullanıcı mevcut. Giriş yapılıyor.");
-                
                 const profile = mapDbUserToProfile(existingUser);
-                
-                // Güvenlik: Veritabanında şifre boşsa, QR PIN'ini şifre olarak ata.
-                // Bu, ayarlar sayfasında şifre değiştirmek istediklerinde "Mevcut Şifre" olarak PIN'i kabul etmesini sağlar.
                 if (!profile.password || profile.password.trim() === '') {
                     profile.password = dbPin;
                 }
-
                 return { success: true, user: profile, isNew: false };
             } else {
-                // --- DURUM: DOLU AMA KULLANICI YOK (HATALI DURUM) ---
-                console.warn("⚠️ Status 'dolu' ama Find_Users tablosunda kayıt yok! Veri düzeltiliyor...");
-                
-                // 1. Status'u 'boş' olarak düzelt
-                await supabase
-                    .from('QR_Kod')
-                    .update({ status: 'boş' })
-                    .eq('short_code', shortCode);
-                
-                // 2. Kayıt moduna yönlendir
+                // Hatalı durum düzeltme
+                await supabase.from('QR_Kod').update({ status: 'boş' }).eq('short_code', shortCode);
                 const tempUser = createTempProfile(shortCode, userPin);
                 return { success: true, user: tempUser, isNew: true };
             }
         }
-
     } catch (e: any) {
-        console.error("🔥 Kritik Auth hatası:", e);
+        console.error("Auth hatası:", e);
         return { success: false, error: `Sunucu hatası: ${e.message}` };
     }
 };
 
-/**
- * Creates the actual user record in Find_Users table after the initial form submission
- */
 export const registerUserAfterForm = async (userProfile: UserProfile, shortCode: string): Promise<boolean> => {
     try {
         const dbUser = mapProfileToDbUser(userProfile);
-        dbUser.qr_code = shortCode; // Ensure link
+        dbUser.qr_code = shortCode; 
         dbUser.created_at = new Date().toISOString();
 
-        // 1. Insert User
-        const { error: createError } = await supabase
-            .from('Find_Users')
-            .insert([dbUser]);
+        const { error: createError } = await supabase.from('Find_Users').insert([dbUser]);
+        if (createError) return false;
 
-        if (createError) {
-            console.error("Kayıt oluşturma hatası:", createError);
-            return false;
-        }
-
-        // 2. Update QR Status to 'dolu'
-        const { error: updateError } = await supabase
-            .from('QR_Kod')
-            .update({ status: 'dolu' })
-            .eq('short_code', shortCode);
-
-        if (updateError) {
-            console.error("QR durum güncelleme hatası:", updateError);
-        } else {
-            console.log("✅ Kayıt tamamlandı, Status 'dolu' yapıldı.");
-        }
-
+        await supabase.from('QR_Kod').update({ status: 'dolu' }).eq('short_code', shortCode);
         return true;
     } catch (e) {
-        console.error(e);
         return false;
     }
 }
@@ -310,37 +246,16 @@ export const updateUserProfile = async (user: UserProfile) => {
         const dbData = mapProfileToDbUser(user);
         delete (dbData as any).id;
         delete (dbData as any).created_at;
-        delete (dbData as any).qr_code; // Don't change the link
+        delete (dbData as any).qr_code;
 
-        // 1. Update Find_Users Table
-        const { error } = await supabase
-            .from('Find_Users')
-            .update(dbData)
-            .eq('username', user.username);
-            
-        if (error) {
-            console.error("Update User Error", error);
-            return false;
-        }
+        const { error } = await supabase.from('Find_Users').update(dbData).eq('username', user.username);
+        if (error) return false;
 
-        // 2. SYNC PASSWORD with QR_Kod Table (Update PIN)
         if (user.password) {
-            console.log("🔄 Şifre değişikliği algılandı. QR PIN güncelleniyor...");
-            const { error: pinError } = await supabase
-                .from('QR_Kod')
-                .update({ pin: user.password })
-                .eq('short_code', user.username);
-            
-            if (pinError) {
-                console.error("❌ Kritik Hata: QR PIN güncellenemedi!", pinError);
-            } else {
-                console.log("✅ QR PIN başarıyla senkronize edildi.");
-            }
+            await supabase.from('QR_Kod').update({ pin: user.password }).eq('short_code', user.username);
         }
-
         return true;
     } catch (e) {
-        console.error("Unexpected error in updateUserProfile", e);
         return false;
     }
 };
@@ -368,23 +283,17 @@ export const getPetForUser = async (username: string): Promise<PetProfile | null
 };
 
 export const savePetForUser = async (user: UserProfile, pet: PetProfile) => {
-     // Ensure user exists first (Lazy creation for new registrations)
      const { data: dbUser } = await supabase.from('Find_Users').select('id').eq('username', user.username).single();
-     
      let ownerId = dbUser?.id;
 
      if (!ownerId) {
-         // This is a fresh registration save
-         const success = await registerUserAfterForm(user, user.username); // username is shortCode here
+         const success = await registerUserAfterForm(user, user.username);
          if (!success) return false;
-         
-         // Fetch ID again
          const { data: newUser } = await supabase.from('Find_Users').select('id').eq('username', user.username).single();
          if (!newUser) return false;
          ownerId = newUser.id;
      }
 
-     // Prepare data
      const petPayload = {
          pet_data: {
              name: pet.name,
@@ -401,25 +310,13 @@ export const savePetForUser = async (user: UserProfile, pet: PetProfile) => {
          owner_id: ownerId
      };
 
-     // Check if pet exists
-     const { data: existingPet } = await supabase
-        .from('Find_Pets')
-        .select('id')
-        .eq('owner_id', ownerId)
-        .single();
+     const { data: existingPet } = await supabase.from('Find_Pets').select('id').eq('owner_id', ownerId).single();
 
      if (existingPet) {
-         // Update
-         const { error } = await supabase
-            .from('Find_Pets')
-            .update(petPayload)
-            .eq('id', existingPet.id);
+         const { error } = await supabase.from('Find_Pets').update(petPayload).eq('id', existingPet.id);
          return !error;
      } else {
-         // Insert
-         const { error } = await supabase
-            .from('Find_Pets')
-            .insert([petPayload]);
+         const { error } = await supabase.from('Find_Pets').insert([petPayload]);
          return !error;
      }
 };

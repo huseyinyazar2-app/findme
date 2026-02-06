@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { Login } from './components/Login';
 import { PetForm } from './components/PetForm';
@@ -8,8 +7,8 @@ import { LostMode } from './components/LostMode';
 import { About } from './components/About';
 import { FinderView } from './components/FinderView';
 import { UserProfile, PetProfile } from './types';
-import { Settings as SettingsIcon, LogOut, FileText, PlusCircle, Siren, Info, RefreshCw, QrCode, MapPin, Loader2 } from 'lucide-react';
-import { loginOrRegister, getPetForUser, savePetForUser, updateUserProfile, checkQRCode, getPublicPetByQr, supabase, logQrScan } from './services/dbService';
+import { Settings as SettingsIcon, LogOut, FileText, PlusCircle, Siren, Info, RefreshCw, QrCode, MapPin, Loader2, Bell, XCircle, AlertTriangle } from 'lucide-react';
+import { loginOrRegister, getPetForUser, savePetForUser, updateUserProfile, checkQRCode, getPublicPetByQr, supabase, logQrScan, getRecentQrScans } from './services/dbService';
 import { APP_VERSION } from './constants';
 
 const App: React.FC = () => {
@@ -31,15 +30,19 @@ const App: React.FC = () => {
   const [qrCode, setQrCode] = useState<string | null>(null);
   const [qrMessage, setQrMessage] = useState<string>('');
   
-  // --- NEW: Scan Overlay State to handle permissions ---
+  // Scan Overlay State (For Permission)
   const [showScanOverlay, setShowScanOverlay] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
-  const scanProcessed = useRef(false); // To prevent double processing
+  const scanProcessed = useRef(false); 
+
+  // Owner Alert State (Log Notification)
+  const [recentScans, setRecentScans] = useState<any[]>([]);
+  const [showScanAlert, setShowScanAlert] = useState(false);
 
   // Update Detection State
   const [updateAvailable, setUpdateAvailable] = useState(false);
 
-  // Theme Management - DEFAULT TO LIGHT
+  // Theme Management
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
     if (typeof window !== 'undefined') {
         const saved = localStorage.getItem('matrixc_theme');
@@ -78,8 +81,34 @@ const App: React.FC = () => {
         if (qrMatch && qrMatch[1]) {
             const code = qrMatch[1];
             setQrCode(code);
-            // Show overlay to force user interaction for location permission
-            setShowScanOverlay(true);
+            
+            // --- NEW LOGIC: Check status BEFORE showing overlay ---
+            // If Lost -> Show Overlay (Ask Location)
+            // If Not Lost -> Silent Log + Show Login
+            
+            const petCheck = await getPublicPetByQr(code);
+            
+            if (petCheck && petCheck.lostStatus?.isActive) {
+                // Pet is LOST! We need location permission. Show Overlay.
+                setShowScanOverlay(true);
+            } else {
+                // Pet is NOT LOST or NOT REGISTERED.
+                // Log silently (background) without location.
+                logQrScan(code, undefined); 
+                
+                // Proceed to standard QR checks for Login/Register flow
+                const check = await checkQRCode(code);
+                if (check.valid) {
+                    if (check.status === 'boş') {
+                        setQrMessage('Yeni etiket! Kayıt oluşturmak için paketten çıkan PIN kodunu giriniz.');
+                    } else {
+                        setQrMessage('Kayıtlı etiket. Yönetim paneli için PIN kodunu giriniz.');
+                    }
+                } else {
+                    setQrMessage('Geçersiz veya Tanımsız QR Kod.');
+                }
+            }
+
         } else {
             // Normal load (not via QR)
             checkSession();
@@ -94,12 +123,16 @@ const App: React.FC = () => {
         if (savedUserStr && !isFinderMode) {
              const sessionUser = JSON.parse(savedUserStr);
              
-             // If accessed via QR, ensure logged in user matches QR owner, otherwise logout
+             // If accessed via QR, ensure logged in user matches QR owner
              if (qrCode && !ignoreQrMismatch && sessionUser.username !== qrCode) {
                  return;
              }
 
              setUser(sessionUser);
+             
+             // Check logs for owner
+             fetchScansForOwner(sessionUser.username);
+
              const pet = await getPetForUser(sessionUser.username);
              if (pet) {
                  setPetProfile(pet);
@@ -110,7 +143,18 @@ const App: React.FC = () => {
         }
   }
 
-  // --- NEW: Manual Scan Trigger to Fix Location/Double Log ---
+  const fetchScansForOwner = async (username: string) => {
+      // Only fetch logs if user is the owner
+      const logs = await getRecentQrScans(username);
+      // Filter out logs that are older than 1 year or handle logic as needed. 
+      // For now, if there are logs, we show them. 
+      if (logs && logs.length > 0) {
+          setRecentScans(logs);
+          setShowScanAlert(true);
+      }
+  };
+
+  // --- Manual Scan Trigger (Only for LOST pets) ---
   const handleStartScan = async () => {
       if (!qrCode || isScanning || scanProcessed.current) return;
       
@@ -141,51 +185,36 @@ const App: React.FC = () => {
       // 2. Log Data with Location
       await logQrScan(qrCode, locationData);
 
-      // 3. Process Logic
-      const check = await checkQRCode(qrCode);
+      // 3. Process Logic (Show Finder View)
+      const publicPet = await getPublicPetByQr(qrCode);
             
-      if (check.valid) {
-        if (check.status === 'boş') {
-            setQrMessage('Yeni etiket! Kayıt oluşturmak için paketten çıkan PIN kodunu giriniz.');
-        } else if (check.status === 'dolu') {
-            // Check if lost
-            const publicPet = await getPublicPetByQr(qrCode);
+      if (publicPet && publicPet.lostStatus?.isActive) {
+            setIsFinderMode(true);
+            setFinderPet(publicPet);
             
-            if (publicPet && publicPet.lostStatus?.isActive) {
-                // IT IS LOST! Show Finder View
-                setIsFinderMode(true);
-                setFinderPet(publicPet);
-                
-                const { data: ownerData } = await supabase
-                    .from('Find_Users')
-                    .select('*')
-                    .eq('username', qrCode)
-                    .single();
-                
-                if (ownerData) {
-                        setFinderOwner({
-                            username: ownerData.username,
-                            email: ownerData.email,
-                            phone: ownerData.phone,
-                            fullName: ownerData.full_name,
-                            contactPreference: ownerData.contact_preference,
-                            emergencyContactName: ownerData.emergency_contact_name,
-                            emergencyContactEmail: ownerData.emergency_contact_email,
-                            emergencyContactPhone: ownerData.emergency_contact_phone,
-                            isEmailVerified: false 
-                        } as UserProfile);
-                }
-            } else {
-                setQrMessage('Kayıtlı etiket. Yönetim paneli için PIN kodunu giriniz.');
+            const { data: ownerData } = await supabase
+                .from('Find_Users')
+                .select('*')
+                .eq('username', qrCode)
+                .single();
+            
+            if (ownerData) {
+                    setFinderOwner({
+                        username: ownerData.username,
+                        email: ownerData.email,
+                        phone: ownerData.phone,
+                        fullName: ownerData.full_name,
+                        contactPreference: ownerData.contact_preference,
+                        emergencyContactName: ownerData.emergency_contact_name,
+                        emergencyContactEmail: ownerData.emergency_contact_email,
+                        emergencyContactPhone: ownerData.emergency_contact_phone,
+                        isEmailVerified: false 
+                    } as UserProfile);
             }
-        }
-    } else {
-        setQrMessage('Geçersiz veya Tanımsız QR Kod.');
-    }
+      }
 
-    setIsScanning(false);
-    setShowScanOverlay(false);
-    checkSession(true); // Check if we are already logged in as this user
+      setIsScanning(false);
+      setShowScanOverlay(false);
   };
 
   const reloadApp = () => {
@@ -199,6 +228,9 @@ const App: React.FC = () => {
     if (result.success && result.user) {
         setUser(result.user);
         localStorage.setItem('matrixc_user_session', JSON.stringify(result.user));
+        
+        // Check logs immediately after login
+        fetchScansForOwner(result.user.username);
 
         if (result.isNew) {
             setPetProfile(null);
@@ -226,6 +258,7 @@ const App: React.FC = () => {
     }
     setUser(null);
     setPetProfile(null);
+    setShowScanAlert(false);
     localStorage.removeItem('matrixc_user_session');
     
     if (qrCode) {
@@ -274,41 +307,41 @@ const App: React.FC = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // --- RENDER SCAN OVERLAY (NEW) ---
+  // --- RENDER SCAN OVERLAY (Only if Lost) ---
   if (showScanOverlay) {
       return (
           <div className="fixed inset-0 bg-slate-900 flex flex-col items-center justify-center p-6 z-[9999]">
               <div className="w-full max-w-sm bg-white dark:bg-slate-800 rounded-3xl p-8 shadow-2xl text-center space-y-6 animate-in zoom-in-95 duration-300">
                   <div className="relative w-24 h-24 mx-auto">
-                      <div className="absolute inset-0 bg-matrix-500 rounded-full animate-ping opacity-20"></div>
-                      <div className="relative bg-matrix-100 dark:bg-matrix-900/50 rounded-full w-full h-full flex items-center justify-center text-matrix-600 dark:text-matrix-400">
-                          <QrCode size={40} />
+                      <div className="absolute inset-0 bg-red-500 rounded-full animate-ping opacity-20"></div>
+                      <div className="relative bg-red-100 dark:bg-red-900/50 rounded-full w-full h-full flex items-center justify-center text-red-600 dark:text-red-400">
+                          <Siren size={40} className="animate-pulse" />
                       </div>
                   </div>
                   
                   <div>
-                      <h2 className="text-2xl font-black text-slate-900 dark:text-white mb-2">Etiket Algılandı</h2>
+                      <h2 className="text-2xl font-black text-slate-900 dark:text-white mb-2">Kayıp Alarmı!</h2>
                       <p className="text-sm text-slate-500 dark:text-gray-400 font-medium leading-relaxed">
-                          Evcil hayvan bilgilerini görüntülemek ve sahibine yardımcı olmak için lütfen işleme devam edin.
+                          Bu evcil hayvan için kayıp ilanı verilmiş. Sahibine yardımcı olmak için lütfen konum iznini onaylayın.
                       </p>
                   </div>
 
                   <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-xl text-xs text-blue-700 dark:text-blue-300 font-bold flex items-center gap-2 text-left">
                       <MapPin size={24} className="shrink-0" />
-                      Güvenlik gereği konum bilginiz paylaşılabilir. Lütfen açılan pencerede "İzin Ver" seçeneğini kullanın.
+                      Konum bilgisi sadece hayvan sahibine iletilecektir.
                   </div>
 
                   <button 
                     onClick={handleStartScan}
                     disabled={isScanning}
-                    className="w-full py-4 bg-gradient-to-r from-matrix-600 to-matrix-700 text-white rounded-xl font-bold shadow-lg shadow-matrix-500/30 flex items-center justify-center gap-2 active:scale-95 transition-all"
+                    className="w-full py-4 bg-gradient-to-r from-red-600 to-red-700 text-white rounded-xl font-bold shadow-lg shadow-red-500/30 flex items-center justify-center gap-2 active:scale-95 transition-all"
                   >
                       {isScanning ? (
                           <>
-                            <Loader2 className="animate-spin" /> Yükleniyor...
+                            <Loader2 className="animate-spin" /> İşleniyor...
                           </>
                       ) : (
-                          "Bilgileri Görüntüle"
+                          "Yardımcı Ol & Bilgileri Gör"
                       )}
                   </button>
               </div>
@@ -354,8 +387,79 @@ const App: React.FC = () => {
   const isAboutActive = currentView === 'about';
 
   return (
-    <div className="min-h-screen font-sans flex flex-col bg-slate-100 dark:bg-matrix-950 transition-colors duration-300">
+    <div className="min-h-screen font-sans flex flex-col bg-slate-100 dark:bg-matrix-950 transition-colors duration-300 relative">
       
+      {/* --- OWNER SCAN ALERT MODAL --- */}
+      {showScanAlert && recentScans.length > 0 && (
+          <div className="fixed inset-0 z-[9999] bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in">
+              <div className="bg-white dark:bg-slate-900 w-full max-w-md rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 flex flex-col max-h-[80vh]">
+                  <div className="bg-red-600 p-4 text-white flex justify-between items-center shrink-0">
+                      <div className="flex items-center gap-2">
+                          <Bell className="animate-swing" />
+                          <h3 className="font-black text-lg">QR Etiketi Okutuldu!</h3>
+                      </div>
+                      <button onClick={() => setShowScanAlert(false)} className="bg-white/20 p-1 rounded-full hover:bg-white/30">
+                          <XCircle />
+                      </button>
+                  </div>
+                  
+                  <div className="p-6 overflow-y-auto">
+                      <p className="text-sm text-slate-600 dark:text-slate-300 mb-4 font-medium leading-relaxed">
+                          QR etiketiniz yakın zamanda tarandı. Bu, evcil hayvanınızın biri tarafından bulunduğu anlamına gelebilir. İşte detaylar:
+                      </p>
+
+                      <div className="space-y-3">
+                          {recentScans.map((scan) => (
+                              <div key={scan.id} className="bg-slate-50 dark:bg-slate-800 p-3 rounded-xl border border-slate-200 dark:border-slate-700 text-sm">
+                                  <div className="flex justify-between items-start mb-2">
+                                      <span className="font-bold text-slate-800 dark:text-white">
+                                          {new Date(scan.scanned_at).toLocaleString('tr-TR')}
+                                      </span>
+                                  </div>
+                                  
+                                  {scan.location ? (
+                                      <a 
+                                        href={`https://www.google.com/maps/search/?api=1&query=${scan.location.lat},${scan.location.lng}`}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="flex items-center gap-2 text-blue-600 dark:text-blue-400 font-bold bg-blue-50 dark:bg-blue-900/20 p-2 rounded-lg hover:bg-blue-100 transition-colors mb-2"
+                                      >
+                                          <MapPin size={16} /> Konumu Haritada Gör
+                                      </a>
+                                  ) : (
+                                      <div className="flex items-center gap-2 text-slate-400 text-xs italic mb-2">
+                                          <MapPin size={14} /> Konum izni verilmedi
+                                      </div>
+                                  )}
+
+                                  <div className="text-xs text-slate-500 dark:text-slate-400 space-y-1 bg-white dark:bg-slate-900/50 p-2 rounded border border-slate-100 dark:border-slate-800">
+                                      <p><strong>Cihaz:</strong> {scan.device_info?.platform || 'Bilinmiyor'}</p>
+                                      {scan.ip_address && <p><strong>IP:</strong> {scan.ip_address}</p>}
+                                  </div>
+                              </div>
+                          ))}
+                      </div>
+
+                      <div className="mt-6 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-xl flex gap-2">
+                          <AlertTriangle className="text-yellow-600 shrink-0" size={20} />
+                          <p className="text-xs text-yellow-800 dark:text-yellow-200 font-medium">
+                              Eğer bulan kişi sizinle iletişime geçmezse, yukarıdaki konum bilgilerini kullanarak bölgeye gitmeyi düşünebilirsiniz.
+                          </p>
+                      </div>
+                  </div>
+
+                  <div className="p-4 border-t border-slate-100 dark:border-slate-800 shrink-0">
+                      <button 
+                        onClick={() => setShowScanAlert(false)}
+                        className="w-full bg-slate-900 dark:bg-slate-700 text-white py-3 rounded-xl font-bold"
+                      >
+                          Anlaşıldı, Kapat
+                      </button>
+                  </div>
+              </div>
+          </div>
+      )}
+
       {updateAvailable && (
           <div onClick={reloadApp} className="fixed top-4 left-4 right-4 bg-matrix-600 dark:bg-matrix-500 text-white p-4 rounded-xl shadow-2xl z-[100] flex items-center justify-between cursor-pointer animate-in slide-in-from-top duration-500 border border-white/20">
               <div className="flex items-center gap-3">
