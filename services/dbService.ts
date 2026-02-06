@@ -1,4 +1,5 @@
 
+
 import { supabase } from './supabase';
 import { UserProfile, PetProfile } from '../types';
 
@@ -17,26 +18,33 @@ export const logQrScan = async (shortCode: string, locationData?: {lat: number, 
         console.log(`📡 Loglama başlatılıyor: ${shortCode}`);
 
         // 1. CİHAZ BİLGİLERİ
+        // Navigator objesinden güvenli veri çekme
+        const userAgent = navigator.userAgent || 'unknown';
+        const platform = navigator.platform || 'unknown';
+        const language = navigator.language || 'unknown';
+        
         const deviceInfo = {
-            userAgent: navigator.userAgent,
-            platform: navigator.platform,
-            language: navigator.language,
+            userAgent: userAgent,
+            platform: platform,
+            language: language,
             screen: {
-                width: window.screen.width,
-                height: window.screen.height
+                width: typeof window !== 'undefined' ? window.screen.width : 0,
+                height: typeof window !== 'undefined' ? window.screen.height : 0
             },
-            referrer: document.referrer || 'direct',
             timestamp_local: new Date().toString()
         };
 
         // 2. IP ADRESİ ALMA (TIMEOUT KORUMALI)
-        // Eğer IP servisi 1.5 saniyede yanıt vermezse beklemeden devam et.
-        let ipAddress = null;
+        let ipAddress = '0.0.0.0'; // Varsayılan değer
         try {
+            // 2 saniye timeout
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 1500); // Max 1.5 sn bekle
+            const timeoutId = setTimeout(() => controller.abort(), 2000);
 
-            const ipRes = await fetch('https://api.ipify.org?format=json', { signal: controller.signal });
+            const ipRes = await fetch('https://api.ipify.org?format=json', { 
+                signal: controller.signal,
+                headers: { 'Content-Type': 'application/json' }
+            });
             clearTimeout(timeoutId);
             
             if (ipRes.ok) {
@@ -44,36 +52,43 @@ export const logQrScan = async (shortCode: string, locationData?: {lat: number, 
                 ipAddress = ipData.ip;
             }
         } catch (e) {
-            console.warn("IP adresi alınamadı (Timeout veya Bloklandı), işlem devam ediyor.");
+            console.warn("IP adresi alınamadı (Timeout veya Bloklandı), varsayılan IP kullanılıyor.");
         }
 
         // 3. VERİTABANINA KAYIT HAZIRLIĞI
         const logPayload = {
             qr_code: shortCode,
             ip_address: ipAddress,
-            user_agent: navigator.userAgent, 
+            user_agent: userAgent, 
             device_info: deviceInfo,
-            location: locationData || null,
+            location: locationData || null, // undefined gitmemesi için null'a zorla
             consent_given: !!locationData
         };
 
+        // Debug için konsola bas
+        console.log("Gönderilecek Payload:", logPayload);
+
         // 4. SUPABASE INSERT
         const { data, error } = await supabase
-            .from('QR_Logs')
+            .from('QR_Logs') // Tablo adı büyük/küçük harf duyarlı olabilir.
             .insert([logPayload])
             .select('id')
             .single();
 
         if (error) {
-            console.error("❌ Log kaydetme hatası (Supabase):", error.message, error.details);
+            // KRİTİK: Telefondan denerken hatayı görebilmek için alert ekliyoruz.
+            // Sorun çözüldüğünde bu alert kaldırılabilir.
+            console.error("❌ Log kaydetme hatası (Supabase):", error);
+            alert(`Loglama Hatası Oluştu!\nKod: ${error.code}\nMesaj: ${error.message}\nDetay: ${error.details || 'Yok'}`);
             return null;
         } else {
             console.log("✅ QR Logu başarıyla kaydedildi. ID:", data.id);
             return data.id;
         }
 
-    } catch (err) {
+    } catch (err: any) {
         console.error("Loglama sistemi genel hatası:", err);
+        alert(`Beklenmeyen Hata:\n${err.message}`);
         return null;
     }
 };
