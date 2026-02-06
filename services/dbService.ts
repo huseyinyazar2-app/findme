@@ -10,14 +10,13 @@ export { supabase };
 /**
  * QR taramasını ve (varsa) konum bilgisini tek seferde kaydeder.
  * Location null gelse bile IP ve Cihaz bilgisini kaydeder.
+ * IP servisi yanıt vermezse kayıt işlemini engellemez.
  */
 export const logQrScan = async (shortCode: string, locationData?: {lat: number, lng: number, accuracy: number} | null): Promise<string | null> => {
     try {
         console.log(`📡 Loglama başlatılıyor: ${shortCode}`);
 
-        // 1. İZİNSİZ VERİLER (Otomatik Toplanan)
-        const nav = navigator as any;
-        
+        // 1. CİHAZ BİLGİLERİ
         const deviceInfo = {
             userAgent: navigator.userAgent,
             platform: navigator.platform,
@@ -30,27 +29,35 @@ export const logQrScan = async (shortCode: string, locationData?: {lat: number, 
             timestamp_local: new Date().toString()
         };
 
-        // IP Adresi Alma
+        // 2. IP ADRESİ ALMA (TIMEOUT KORUMALI)
+        // Eğer IP servisi 1.5 saniyede yanıt vermezse beklemeden devam et.
         let ipAddress = null;
         try {
-            const ipRes = await fetch('https://api.ipify.org?format=json');
-            const ipData = await ipRes.json();
-            ipAddress = ipData.ip;
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 1500); // Max 1.5 sn bekle
+
+            const ipRes = await fetch('https://api.ipify.org?format=json', { signal: controller.signal });
+            clearTimeout(timeoutId);
+            
+            if (ipRes.ok) {
+                const ipData = await ipRes.json();
+                ipAddress = ipData.ip;
+            }
         } catch (e) {
-            console.warn("IP adresi alınamadı.");
+            console.warn("IP adresi alınamadı (Timeout veya Bloklandı), işlem devam ediyor.");
         }
 
-        // 2. VERİTABANINA KAYIT
-        // Location varsa ekle, yoksa null git.
+        // 3. VERİTABANINA KAYIT HAZIRLIĞI
         const logPayload = {
             qr_code: shortCode,
             ip_address: ipAddress,
             user_agent: navigator.userAgent, 
             device_info: deviceInfo,
             location: locationData || null,
-            consent_given: !!locationData // Eğer location geldiyse izin verilmiştir
+            consent_given: !!locationData
         };
 
+        // 4. SUPABASE INSERT
         const { data, error } = await supabase
             .from('QR_Logs')
             .insert([logPayload])
@@ -58,10 +65,10 @@ export const logQrScan = async (shortCode: string, locationData?: {lat: number, 
             .single();
 
         if (error) {
-            console.error("❌ Log kaydetme hatası:", error);
+            console.error("❌ Log kaydetme hatası (Supabase):", error.message, error.details);
             return null;
         } else {
-            console.log("✅ QR Logu kaydedildi. ID:", data.id);
+            console.log("✅ QR Logu başarıyla kaydedildi. ID:", data.id);
             return data.id;
         }
 
