@@ -1,4 +1,5 @@
 
+
 import { supabase } from './supabase';
 import { UserProfile, PetProfile } from '../types';
 
@@ -17,7 +18,6 @@ export const logQrScan = async (shortCode: string, locationData?: {lat: number, 
         console.log(`📡 Loglama başlatılıyor: ${shortCode}`);
 
         // 1. CİHAZ BİLGİLERİ
-        // Navigator objesinden güvenli veri çekme
         const userAgent = navigator.userAgent || 'unknown';
         const platform = navigator.platform || 'unknown';
         const language = navigator.language || 'unknown';
@@ -33,14 +33,16 @@ export const logQrScan = async (shortCode: string, locationData?: {lat: number, 
             timestamp_local: new Date().toString()
         };
 
-        // 2. IP ADRESİ ALMA (TIMEOUT KORUMALI)
-        let ipAddress = '0.0.0.0'; // Varsayılan değer
-        try {
-            // 2 saniye timeout
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 2000);
+        // 2. IP ve IP-TABANLI KONUM ALMA
+        // ipify yerine ipwho.is kullanıyoruz (Hem IP hem Lat/Lng veriyor)
+        let ipAddress = '0.0.0.0';
+        let ipLocationData = null;
 
-            const ipRes = await fetch('https://api.ipify.org?format=json', { 
+        try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 3000); // 3sn bekle
+
+            const ipRes = await fetch('https://ipwho.is/', { 
                 signal: controller.signal,
                 headers: { 'Content-Type': 'application/json' }
             });
@@ -48,23 +50,51 @@ export const logQrScan = async (shortCode: string, locationData?: {lat: number, 
             
             if (ipRes.ok) {
                 const ipData = await ipRes.json();
-                ipAddress = ipData.ip;
+                if (ipData.success) {
+                    ipAddress = ipData.ip;
+                    // IP'den gelen yaklaşık konum verisi
+                    ipLocationData = {
+                        lat: ipData.latitude,
+                        lng: ipData.longitude,
+                        city: ipData.city,
+                        country: ipData.country,
+                        source: 'IP', // Kaynağı belirtiyoruz
+                        accuracy: 5000 // IP konumları genelde geniş çaplıdır (5km varsayalım)
+                    };
+                } else {
+                    // Servis hata dönerse (Rate limit vb.)
+                    ipAddress = ipData.ip || '0.0.0.0'; 
+                }
             }
         } catch (e) {
-            console.warn("IP adresi alınamadı (Timeout veya Bloklandı), varsayılan IP kullanılıyor.");
+            console.warn("IP/Konum servisi yanıt vermedi:", e);
         }
 
-        // 3. VERİTABANINA KAYIT HAZIRLIĞI
+        // 3. KONUM VERİSİNİ BELİRLE (GPS Öncelikli, Yoksa IP)
+        let finalLocation = null;
+
+        if (locationData) {
+            // Kullanıcı GPS izni verdiyse kesin konumu kullan
+            finalLocation = {
+                ...locationData,
+                source: 'GPS'
+            };
+        } else if (ipLocationData) {
+            // GPS yoksa IP konumunu kullan
+            finalLocation = ipLocationData;
+        }
+
+        // 4. PAYLOAD HAZIRLA
         const logPayload = {
             qr_code: shortCode,
             ip_address: ipAddress,
             user_agent: userAgent, 
             device_info: deviceInfo,
-            location: locationData || null, // undefined gitmemesi için null'a zorla
-            consent_given: !!locationData
+            location: finalLocation, // GPS veya IP konumu
+            consent_given: !!locationData // Sadece GPS verildiyse rıza var sayılır
         };
 
-        // 4. SUPABASE INSERT
+        // 5. SUPABASE INSERT
         const { data, error } = await supabase
             .from('QR_Logs') 
             .insert([logPayload])
@@ -73,7 +103,6 @@ export const logQrScan = async (shortCode: string, locationData?: {lat: number, 
 
         if (error) {
             console.error("❌ Log kaydetme hatası (Supabase):", error);
-            // Alert kaldırıldı, sadece konsola basıyoruz.
             return null;
         } else {
             console.log("✅ QR Logu başarıyla kaydedildi. ID:", data.id);

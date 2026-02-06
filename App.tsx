@@ -8,7 +8,7 @@ import { LostMode } from './components/LostMode';
 import { About } from './components/About';
 import { FinderView } from './components/FinderView';
 import { UserProfile, PetProfile } from './types';
-import { Settings as SettingsIcon, LogOut, FileText, PlusCircle, Siren, Info, RefreshCw, QrCode, MapPin, Loader2, Bell, XCircle, AlertTriangle, ShieldCheck, UserCheck } from 'lucide-react';
+import { Settings as SettingsIcon, LogOut, FileText, PlusCircle, Siren, Info, RefreshCw, QrCode, MapPin, Loader2, Bell, XCircle, AlertTriangle, ShieldCheck, UserCheck, Globe } from 'lucide-react';
 import { loginOrRegister, getPetForUser, savePetForUser, updateUserProfile, checkQRCode, getPublicPetByQr, supabase, logQrScan, getRecentQrScans } from './services/dbService';
 import { APP_VERSION } from './constants';
 
@@ -204,7 +204,7 @@ const App: React.FC = () => {
               accuracy: position.coords.accuracy
           };
       } catch (e) {
-          console.warn("Konum alınamadı veya reddedildi, sadece IP loglanacak:", e);
+          console.warn("Konum alınamadı veya reddedildi, IP'den yaklaşık konum denenecek.");
       }
 
       // LOG TO DATABASE (Guaranteed IP, Optional Location)
@@ -452,41 +452,53 @@ const App: React.FC = () => {
                       </p>
 
                       <div className="space-y-3">
-                          {recentScans.map((scan) => (
-                              <div key={scan.id} className="bg-slate-50 dark:bg-slate-800 p-3 rounded-xl border border-slate-200 dark:border-slate-700 text-sm">
-                                  <div className="flex justify-between items-start mb-2">
-                                      <span className="font-bold text-slate-800 dark:text-white">
-                                          {new Date(scan.scanned_at).toLocaleString('tr-TR')}
-                                      </span>
-                                  </div>
-                                  
-                                  {scan.location ? (
-                                      <a 
-                                        href={`https://www.google.com/maps/search/?api=1&query=${scan.location.lat},${scan.location.lng}`}
-                                        target="_blank"
-                                        rel="noreferrer"
-                                        className="flex items-center gap-2 text-blue-600 dark:text-blue-400 font-bold bg-blue-50 dark:bg-blue-900/20 p-2 rounded-lg hover:bg-blue-100 transition-colors mb-2"
-                                      >
-                                          <MapPin size={16} /> Konumu Haritada Gör
-                                      </a>
-                                  ) : (
-                                      <div className="flex items-center gap-2 text-slate-400 text-xs italic mb-2">
-                                          <MapPin size={14} /> Konum izni verilmedi
-                                      </div>
-                                  )}
+                          {recentScans.map((scan) => {
+                              const isIpSource = scan.location?.source === 'IP' || scan.location?.accuracy > 1000;
+                              
+                              return (
+                                <div key={scan.id} className="bg-slate-50 dark:bg-slate-800 p-3 rounded-xl border border-slate-200 dark:border-slate-700 text-sm">
+                                    <div className="flex justify-between items-start mb-2">
+                                        <span className="font-bold text-slate-800 dark:text-white">
+                                            {new Date(scan.scanned_at).toLocaleString('tr-TR')}
+                                        </span>
+                                    </div>
+                                    
+                                    {scan.location ? (
+                                        <>
+                                            <a 
+                                              href={`https://www.google.com/maps/search/?api=1&query=${scan.location.lat},${scan.location.lng}`}
+                                              target="_blank"
+                                              rel="noreferrer"
+                                              className={`flex items-center gap-2 font-bold p-2 rounded-lg transition-colors mb-2 ${isIpSource ? 'bg-orange-50 text-orange-600 dark:bg-orange-900/20 dark:text-orange-400' : 'bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400'}`}
+                                            >
+                                                {isIpSource ? <Globe size={16} /> : <MapPin size={16} />} 
+                                                {isIpSource ? 'Yaklaşık Konum (IP)' : 'Kesin Konum (GPS)'} Haritada Gör
+                                            </a>
+                                            {isIpSource && scan.location.city && (
+                                                <p className="text-xs text-orange-600 dark:text-orange-400 mb-2 pl-1 font-medium">
+                                                    Tahmini Bölge: {scan.location.city}
+                                                </p>
+                                            )}
+                                        </>
+                                    ) : (
+                                        <div className="flex items-center gap-2 text-slate-400 text-xs italic mb-2 bg-slate-100 dark:bg-slate-900/50 p-2 rounded">
+                                            <AlertTriangle size={14} /> Konum bilgisi paylaşılmadı
+                                        </div>
+                                    )}
 
-                                  <div className="text-xs text-slate-500 dark:text-slate-400 space-y-1 bg-white dark:bg-slate-900/50 p-2 rounded border border-slate-100 dark:border-slate-800">
-                                      <p><strong>Cihaz:</strong> {scan.device_info?.platform || 'Bilinmiyor'}</p>
-                                      {scan.ip_address && <p><strong>IP:</strong> {scan.ip_address}</p>}
-                                  </div>
-                              </div>
-                          ))}
+                                    <div className="text-xs text-slate-500 dark:text-slate-400 space-y-1 bg-white dark:bg-slate-900/50 p-2 rounded border border-slate-100 dark:border-slate-800">
+                                        <p><strong>Cihaz:</strong> {scan.device_info?.platform || 'Bilinmiyor'}</p>
+                                        {scan.ip_address && <p><strong>IP:</strong> {scan.ip_address}</p>}
+                                    </div>
+                                </div>
+                              );
+                          })}
                       </div>
 
                       <div className="mt-6 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-xl flex gap-2">
                           <AlertTriangle className="text-yellow-600 shrink-0" size={20} />
                           <p className="text-xs text-yellow-800 dark:text-yellow-200 font-medium">
-                              Eğer bulan kişi sizinle iletişime geçmezse, yukarıdaki konum bilgilerini kullanarak bölgeye gitmeyi düşünebilirsiniz.
+                              Not: "Yaklaşık Konum", internet sağlayıcısının dağıtım merkezini gösterir. Hayvanın o an orada olduğu kesin değildir, ancak o şehir/semtte olduğuna dair güçlü bir işarettir.
                           </p>
                       </div>
                   </div>
