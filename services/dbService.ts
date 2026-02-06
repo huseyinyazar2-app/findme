@@ -1,5 +1,4 @@
 
-
 import { supabase } from './supabase';
 import { UserProfile, PetProfile } from '../types';
 
@@ -65,21 +64,16 @@ export const logQrScan = async (shortCode: string, locationData?: {lat: number, 
             consent_given: !!locationData
         };
 
-        // Debug için konsola bas
-        console.log("Gönderilecek Payload:", logPayload);
-
         // 4. SUPABASE INSERT
         const { data, error } = await supabase
-            .from('QR_Logs') // Tablo adı büyük/küçük harf duyarlı olabilir.
+            .from('QR_Logs') 
             .insert([logPayload])
             .select('id')
             .single();
 
         if (error) {
-            // KRİTİK: Telefondan denerken hatayı görebilmek için alert ekliyoruz.
-            // Sorun çözüldüğünde bu alert kaldırılabilir.
             console.error("❌ Log kaydetme hatası (Supabase):", error);
-            alert(`Loglama Hatası Oluştu!\nKod: ${error.code}\nMesaj: ${error.message}\nDetay: ${error.details || 'Yok'}`);
+            // Alert kaldırıldı, sadece konsola basıyoruz.
             return null;
         } else {
             console.log("✅ QR Logu başarıyla kaydedildi. ID:", data.id);
@@ -88,7 +82,6 @@ export const logQrScan = async (shortCode: string, locationData?: {lat: number, 
 
     } catch (err: any) {
         console.error("Loglama sistemi genel hatası:", err);
-        alert(`Beklenmeyen Hata:\n${err.message}`);
         return null;
     }
 };
