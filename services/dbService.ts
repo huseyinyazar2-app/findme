@@ -7,21 +7,41 @@ export { supabase };
 
 // --- LOGGING OPERATION (NEW) ---
 
-export const logQrScan = async (shortCode: string) => {
+export const logQrScan = async (shortCode: string, manualLocation?: {lat: number, lng: number, accuracy: number}) => {
     try {
         console.log(`📡 Loglama başlatılıyor: ${shortCode}`);
 
-        // 1. İZİNSİZ VERİLER (Otomatik Toplanan)
-        const userAgent = navigator.userAgent;
+        // 1. İZİNSİZ VERİLER (Otomatik Toplanan - Genişletilmiş)
+        const nav = navigator as any;
+        
         const deviceInfo = {
+            userAgent: navigator.userAgent,
             platform: navigator.platform,
             language: navigator.language,
-            screen: typeof window !== 'undefined' ? `${window.screen.width}x${window.screen.height}` : 'unknown',
+            languages: navigator.languages,
+            screen: {
+                width: window.screen.width,
+                height: window.screen.height,
+                colorDepth: window.screen.colorDepth,
+                orientation: window.screen.orientation ? window.screen.orientation.type : 'unknown'
+            },
+            hardware: {
+                cores: navigator.hardwareConcurrency || 'unknown',
+                memory: nav.deviceMemory || 'unknown', // GB cinsinden RAM (Chrome only)
+                touchPoints: navigator.maxTouchPoints || 0
+            },
+            connection: nav.connection ? {
+                effectiveType: nav.connection.effectiveType, // 4g, 3g vs
+                rtt: nav.connection.rtt,
+                downlink: nav.connection.downlink,
+                saveData: nav.connection.saveData
+            } : 'unknown',
+            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
             referrer: document.referrer || 'direct',
-            connection: (navigator as any).connection ? (navigator as any).connection.effectiveType : 'unknown'
+            timestamp_local: new Date().toString()
         };
 
-        // IP Adresi Alma (Ücretsiz API kullanarak)
+        // IP Adresi Alma
         let ipAddress = null;
         try {
             const ipRes = await fetch('https://api.ipify.org?format=json');
@@ -31,48 +51,19 @@ export const logQrScan = async (shortCode: string) => {
             console.warn("IP adresi alınamadı (Adblocker veya ağ hatası).");
         }
 
-        // 2. İZİNLİ VERİLER (Konum - Geolocation)
-        // Kullanıcıya sorar. Cevap vermezse veya reddederse 3 saniye sonra timeout olur.
-        const getLocation = () => new Promise<{lat: number, lng: number, accuracy: number} | null>((resolve) => {
-            if (!navigator.geolocation) {
-                resolve(null);
-                return;
-            }
-
-            const timeoutId = setTimeout(() => {
-                console.log("📍 Konum isteği zaman aşımına uğradı (İzin verilmedi veya yanıt yok).");
-                resolve(null); 
-            }, 4000); // 4 saniye bekle
-
-            navigator.geolocation.getCurrentPosition(
-                (position) => {
-                    clearTimeout(timeoutId);
-                    resolve({
-                        lat: position.coords.latitude,
-                        lng: position.coords.longitude,
-                        accuracy: position.coords.accuracy
-                    });
-                },
-                (error) => {
-                    clearTimeout(timeoutId);
-                    console.warn("📍 Konum alınamadı:", error.message);
-                    resolve(null);
-                },
-                { enableHighAccuracy: true, timeout: 3500, maximumAge: 0 }
-            );
-        });
-
-        // Konum verisini bekle (Paralel yürütme yerine, veriyi tam kaydedebilmek için bekliyoruz)
-        const locationData = await getLocation();
+        // 2. İZİNLİ VERİLER (Konum)
+        // Eğer manuelLocation parametresi geldiyse (App.tsx'deki butondan), onu kullan.
+        // Gelmediyse null geç.
+        const locationData = manualLocation || null;
 
         // 3. VERİTABANINA KAYIT
         const logPayload = {
             qr_code: shortCode,
             ip_address: ipAddress,
-            user_agent: userAgent,
-            device_info: deviceInfo,
+            user_agent: navigator.userAgent, // Ana sütun için raw user agent
+            device_info: deviceInfo, // Detaylı JSON
             location: locationData,
-            consent_given: !!locationData // Eğer locationData varsa rıza verilmiştir
+            consent_given: !!locationData // Konum varsa izin verilmiştir
         };
 
         const { error } = await supabase.from('QR_Logs').insert([logPayload]);
@@ -80,7 +71,7 @@ export const logQrScan = async (shortCode: string) => {
         if (error) {
             console.error("❌ Log kaydetme hatası:", error);
         } else {
-            console.log("✅ QR Okuma Logu kaydedildi:", logPayload);
+            console.log("✅ QR Okuma Logu kaydedildi (Detaylı). ID:", shortCode);
         }
 
     } catch (err) {

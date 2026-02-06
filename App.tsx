@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Login } from './components/Login';
 import { PetForm } from './components/PetForm';
 import { Settings } from './components/Settings';
@@ -8,7 +8,7 @@ import { LostMode } from './components/LostMode';
 import { About } from './components/About';
 import { FinderView } from './components/FinderView';
 import { UserProfile, PetProfile } from './types';
-import { Settings as SettingsIcon, LogOut, FileText, PlusCircle, Siren, Info, RefreshCw } from 'lucide-react';
+import { Settings as SettingsIcon, LogOut, FileText, PlusCircle, Siren, Info, RefreshCw, QrCode, MapPin, Loader2 } from 'lucide-react';
 import { loginOrRegister, getPetForUser, savePetForUser, updateUserProfile, checkQRCode, getPublicPetByQr, supabase, logQrScan } from './services/dbService';
 import { APP_VERSION } from './constants';
 
@@ -30,6 +30,11 @@ const App: React.FC = () => {
   // QR Handling State
   const [qrCode, setQrCode] = useState<string | null>(null);
   const [qrMessage, setQrMessage] = useState<string>('');
+  
+  // --- NEW: Scan Overlay State to handle permissions ---
+  const [showScanOverlay, setShowScanOverlay] = useState(false);
+  const [isScanning, setIsScanning] = useState(false);
+  const scanProcessed = useRef(false); // To prevent double processing
 
   // Update Detection State
   const [updateAvailable, setUpdateAvailable] = useState(false);
@@ -39,7 +44,6 @@ const App: React.FC = () => {
     if (typeof window !== 'undefined') {
         const saved = localStorage.getItem('matrixc_theme');
         if (saved) return saved as 'light' | 'dark';
-        // Default to light, ignore system pref for now to match user request
         return 'light';
     }
     return 'light';
@@ -55,7 +59,7 @@ const App: React.FC = () => {
     localStorage.setItem('matrixc_theme', theme);
   }, [theme]);
 
-  // --- INITIALIZATION & QR CHECK & UPDATE CHECK ---
+  // --- INITIALIZATION & QR CHECK ---
   useEffect(() => {
     const initApp = async () => {
         // 1. Version Check
@@ -74,60 +78,24 @@ const App: React.FC = () => {
         if (qrMatch && qrMatch[1]) {
             const code = qrMatch[1];
             setQrCode(code);
-            
-            // --- LOGGING: QR OKUTULDU, LOGLA ---
-            // Arka planda çalışır, UI'ı bloklamaz.
-            logQrScan(code);
-
-            // Check Database for this QR
-            const check = await checkQRCode(code);
-            
-            if (check.valid) {
-                if (check.status === 'boş') {
-                    setQrMessage('Yeni etiket! Kayıt oluşturmak için paketten çıkan PIN kodunu giriniz.');
-                } else if (check.status === 'dolu') {
-                    // --- CRITICAL CHANGE: Check if lost immediately ---
-                    const publicPet = await getPublicPetByQr(code);
-                    
-                    if (publicPet && publicPet.lostStatus?.isActive) {
-                        // IT IS LOST! Show Finder View immediately.
-                        setIsFinderMode(true);
-                        setFinderPet(publicPet);
-                        
-                        // Try to get basic owner info for contact buttons
-                        const { data: ownerData } = await supabase
-                            .from('Find_Users')
-                            .select('*')
-                            .eq('username', code)
-                            .single();
-                        
-                        if (ownerData) {
-                             setFinderOwner({
-                                 username: ownerData.username,
-                                 email: ownerData.email,
-                                 phone: ownerData.phone,
-                                 fullName: ownerData.full_name,
-                                 contactPreference: ownerData.contact_preference,
-                                 emergencyContactName: ownerData.emergency_contact_name,
-                                 emergencyContactEmail: ownerData.emergency_contact_email,
-                                 emergencyContactPhone: ownerData.emergency_contact_phone,
-                                 isEmailVerified: false 
-                             } as UserProfile);
-                        }
-                    } else {
-                        setQrMessage('Kayıtlı etiket. Yönetim paneli için PIN kodunu giriniz.');
-                    }
-                }
-            } else {
-                setQrMessage('Geçersiz veya Tanımsız QR Kod.');
-            }
+            // Show overlay to force user interaction for location permission
+            setShowScanOverlay(true);
+        } else {
+            // Normal load (not via QR)
+            checkSession();
         }
+    };
 
-        // 3. Check Local Session (Simple persistence)
+    initApp();
+  }, []);
+
+  const checkSession = async (ignoreQrMismatch = false) => {
         const savedUserStr = localStorage.getItem('matrixc_user_session');
         if (savedUserStr && !isFinderMode) {
              const sessionUser = JSON.parse(savedUserStr);
-             if (qrMatch && qrMatch[1] && sessionUser.username !== qrMatch[1]) {
+             
+             // If accessed via QR, ensure logged in user matches QR owner, otherwise logout
+             if (qrCode && !ignoreQrMismatch && sessionUser.username !== qrCode) {
                  return;
              }
 
@@ -140,10 +108,85 @@ const App: React.FC = () => {
                  setCurrentView('home');
              }
         }
-    };
+  }
 
-    initApp();
-  }, []);
+  // --- NEW: Manual Scan Trigger to Fix Location/Double Log ---
+  const handleStartScan = async () => {
+      if (!qrCode || isScanning || scanProcessed.current) return;
+      
+      setIsScanning(true);
+      scanProcessed.current = true; // Prevent double clicks
+
+      // 1. Try to get Location (User interaction allows this now)
+      let locationData = undefined;
+      
+      try {
+          const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+              if (!navigator.geolocation) reject(new Error("No Geo"));
+              navigator.geolocation.getCurrentPosition(resolve, reject, {
+                  enableHighAccuracy: true,
+                  timeout: 5000
+              });
+          });
+          
+          locationData = {
+              lat: position.coords.latitude,
+              lng: position.coords.longitude,
+              accuracy: position.coords.accuracy
+          };
+      } catch (e) {
+          console.warn("Konum izni verilmedi veya hata:", e);
+      }
+
+      // 2. Log Data with Location
+      await logQrScan(qrCode, locationData);
+
+      // 3. Process Logic
+      const check = await checkQRCode(qrCode);
+            
+      if (check.valid) {
+        if (check.status === 'boş') {
+            setQrMessage('Yeni etiket! Kayıt oluşturmak için paketten çıkan PIN kodunu giriniz.');
+        } else if (check.status === 'dolu') {
+            // Check if lost
+            const publicPet = await getPublicPetByQr(qrCode);
+            
+            if (publicPet && publicPet.lostStatus?.isActive) {
+                // IT IS LOST! Show Finder View
+                setIsFinderMode(true);
+                setFinderPet(publicPet);
+                
+                const { data: ownerData } = await supabase
+                    .from('Find_Users')
+                    .select('*')
+                    .eq('username', qrCode)
+                    .single();
+                
+                if (ownerData) {
+                        setFinderOwner({
+                            username: ownerData.username,
+                            email: ownerData.email,
+                            phone: ownerData.phone,
+                            fullName: ownerData.full_name,
+                            contactPreference: ownerData.contact_preference,
+                            emergencyContactName: ownerData.emergency_contact_name,
+                            emergencyContactEmail: ownerData.emergency_contact_email,
+                            emergencyContactPhone: ownerData.emergency_contact_phone,
+                            isEmailVerified: false 
+                        } as UserProfile);
+                }
+            } else {
+                setQrMessage('Kayıtlı etiket. Yönetim paneli için PIN kodunu giriniz.');
+            }
+        }
+    } else {
+        setQrMessage('Geçersiz veya Tanımsız QR Kod.');
+    }
+
+    setIsScanning(false);
+    setShowScanOverlay(false);
+    checkSession(true); // Check if we are already logged in as this user
+  };
 
   const reloadApp = () => {
     localStorage.setItem('matrixc_app_version', APP_VERSION);
@@ -230,6 +273,48 @@ const App: React.FC = () => {
     setCurrentView(view);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
+
+  // --- RENDER SCAN OVERLAY (NEW) ---
+  if (showScanOverlay) {
+      return (
+          <div className="fixed inset-0 bg-slate-900 flex flex-col items-center justify-center p-6 z-[9999]">
+              <div className="w-full max-w-sm bg-white dark:bg-slate-800 rounded-3xl p-8 shadow-2xl text-center space-y-6 animate-in zoom-in-95 duration-300">
+                  <div className="relative w-24 h-24 mx-auto">
+                      <div className="absolute inset-0 bg-matrix-500 rounded-full animate-ping opacity-20"></div>
+                      <div className="relative bg-matrix-100 dark:bg-matrix-900/50 rounded-full w-full h-full flex items-center justify-center text-matrix-600 dark:text-matrix-400">
+                          <QrCode size={40} />
+                      </div>
+                  </div>
+                  
+                  <div>
+                      <h2 className="text-2xl font-black text-slate-900 dark:text-white mb-2">Etiket Algılandı</h2>
+                      <p className="text-sm text-slate-500 dark:text-gray-400 font-medium leading-relaxed">
+                          Evcil hayvan bilgilerini görüntülemek ve sahibine yardımcı olmak için lütfen işleme devam edin.
+                      </p>
+                  </div>
+
+                  <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-xl text-xs text-blue-700 dark:text-blue-300 font-bold flex items-center gap-2 text-left">
+                      <MapPin size={24} className="shrink-0" />
+                      Güvenlik gereği konum bilginiz paylaşılabilir. Lütfen açılan pencerede "İzin Ver" seçeneğini kullanın.
+                  </div>
+
+                  <button 
+                    onClick={handleStartScan}
+                    disabled={isScanning}
+                    className="w-full py-4 bg-gradient-to-r from-matrix-600 to-matrix-700 text-white rounded-xl font-bold shadow-lg shadow-matrix-500/30 flex items-center justify-center gap-2 active:scale-95 transition-all"
+                  >
+                      {isScanning ? (
+                          <>
+                            <Loader2 className="animate-spin" /> Yükleniyor...
+                          </>
+                      ) : (
+                          "Bilgileri Görüntüle"
+                      )}
+                  </button>
+              </div>
+          </div>
+      )
+  }
 
   // --- RENDER FINDER MODE ---
   if (isFinderMode && finderPet) {
