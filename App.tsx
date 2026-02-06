@@ -9,7 +9,7 @@ import { About } from './components/About';
 import { FinderView } from './components/FinderView';
 import { UserProfile, PetProfile } from './types';
 import { Settings as SettingsIcon, LogOut, FileText, PlusCircle, Siren, Info, RefreshCw, QrCode, MapPin, Loader2, Bell, XCircle, AlertTriangle, ShieldCheck, UserCheck } from 'lucide-react';
-import { loginOrRegister, getPetForUser, savePetForUser, updateUserProfile, checkQRCode, getPublicPetByQr, supabase, logQrScan, updateQrLogLocation, getRecentQrScans } from './services/dbService';
+import { loginOrRegister, getPetForUser, savePetForUser, updateUserProfile, checkQRCode, getPublicPetByQr, supabase, logQrScan, getRecentQrScans } from './services/dbService';
 import { APP_VERSION } from './constants';
 
 const App: React.FC = () => {
@@ -33,12 +33,8 @@ const App: React.FC = () => {
   
   // LOGIC STATES
   const [showLostSelectionModal, setShowLostSelectionModal] = useState(false); // New Modal for Lost Pets
-  const [showScanOverlay, setShowScanOverlay] = useState(false); // Location Permission Overlay
-  const [isScanning, setIsScanning] = useState(false);
+  const [isFinderLoading, setIsFinderLoading] = useState(false); // Spinner for the finder button
   
-  // LOGGING STATE
-  const [currentLogId, setCurrentLogId] = useState<string | null>(null); 
-
   // Owner Alert State (Log Notification)
   const [recentScans, setRecentScans] = useState<any[]>([]);
   const [showScanAlert, setShowScanAlert] = useState(false);
@@ -183,17 +179,41 @@ const App: React.FC = () => {
 
   // --- USER CHOICES ---
 
-  // 1. Finder Action: "I Found It"
+  // 1. Finder Action: "I Found It" - Handles Geo + Log + Redirect in ONE step
   const handleFinderAction = async () => {
-      if (!qrCode) return;
-      setShowLostSelectionModal(false); // Close selection modal
-      
-      // LOG NOW (IP/Device Only first)
-      const logId = await logQrScan(qrCode);
-      if (logId) setCurrentLogId(logId);
+      if (!qrCode || isFinderLoading) return;
+      setIsFinderLoading(true);
 
-      // Show Location Permission Overlay
-      setShowScanOverlay(true);
+      // Attempt to get location (Timeout 4s)
+      let locationData = null;
+      try {
+          const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+              if (!navigator.geolocation) {
+                  reject(new Error("No Geo"));
+                  return;
+              }
+              navigator.geolocation.getCurrentPosition(resolve, reject, {
+                  enableHighAccuracy: true,
+                  timeout: 4000 // Wait max 4s for user to allow/deny
+              });
+          });
+          
+          locationData = {
+              lat: position.coords.latitude,
+              lng: position.coords.longitude,
+              accuracy: position.coords.accuracy
+          };
+      } catch (e) {
+          console.warn("Konum alınamadı veya reddedildi, sadece IP loglanacak:", e);
+      }
+
+      // LOG TO DATABASE (Guaranteed IP, Optional Location)
+      await logQrScan(qrCode, locationData);
+
+      // UI Transitions
+      setIsFinderLoading(false);
+      setShowLostSelectionModal(false);
+      setIsFinderMode(true);
   };
 
   // 2. Owner Action: "I am Owner"
@@ -203,44 +223,6 @@ const App: React.FC = () => {
       if (qrCode) {
         proceedToStandardFlow(qrCode);
       }
-  };
-
-  // --- Manual Scan Trigger (Updates Location) ---
-  const handleStartLocationScan = async () => {
-      if (isScanning) return;
-      setIsScanning(true);
-
-      // 1. Try to get Location
-      let locationData = undefined;
-      
-      try {
-          const position = await new Promise<GeolocationPosition>((resolve, reject) => {
-              if (!navigator.geolocation) reject(new Error("No Geo"));
-              navigator.geolocation.getCurrentPosition(resolve, reject, {
-                  enableHighAccuracy: true,
-                  timeout: 5000
-              });
-          });
-          
-          locationData = {
-              lat: position.coords.latitude,
-              lng: position.coords.longitude,
-              accuracy: position.coords.accuracy
-          };
-
-          // 2. Update the existing log with location
-          if (currentLogId && locationData) {
-              await updateQrLogLocation(currentLogId, locationData);
-          } 
-
-      } catch (e) {
-          console.warn("Konum izni verilmedi veya hata:", e);
-      }
-
-      // 3. Show Finder View
-      setIsFinderMode(true);
-      setIsScanning(false);
-      setShowScanOverlay(false);
   };
 
   const reloadApp = () => {
@@ -365,13 +347,22 @@ const App: React.FC = () => {
                     {/* BUTTON 1: FINDER */}
                     <button 
                         onClick={handleFinderAction}
-                        className="w-full group relative overflow-hidden bg-red-600 hover:bg-red-700 text-white py-4 px-6 rounded-2xl shadow-xl shadow-red-500/30 transition-all active:scale-95"
+                        disabled={isFinderLoading}
+                        className="w-full group relative overflow-hidden bg-red-600 hover:bg-red-700 text-white py-4 px-6 rounded-2xl shadow-xl shadow-red-500/30 transition-all active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed"
                     >
                         <div className="flex items-center justify-center gap-3 relative z-10">
-                            <ShieldCheck size={24} />
+                            {isFinderLoading ? (
+                                <Loader2 size={24} className="animate-spin" />
+                            ) : (
+                                <ShieldCheck size={24} />
+                            )}
                             <div className="text-left">
-                                <span className="block text-xs font-bold opacity-80 uppercase tracking-wider">Yardımcı Ol</span>
-                                <span className="block text-lg font-black leading-none">BULDUM / GÖRDÜM</span>
+                                <span className="block text-xs font-bold opacity-80 uppercase tracking-wider">
+                                    {isFinderLoading ? 'Konum Alınıyor...' : 'Yardımcı Ol'}
+                                </span>
+                                <span className="block text-lg font-black leading-none">
+                                    {isFinderLoading ? 'İŞLENİYOR' : 'BULDUM / GÖRDÜM'}
+                                </span>
                             </div>
                         </div>
                     </button>
@@ -385,6 +376,7 @@ const App: React.FC = () => {
                     {/* BUTTON 2: OWNER */}
                     <button 
                         onClick={handleOwnerAction}
+                        disabled={isFinderLoading}
                         className="w-full bg-white dark:bg-slate-700 border-2 border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-200 py-3.5 px-6 rounded-2xl font-bold hover:bg-slate-50 dark:hover:bg-slate-600 transition-all active:scale-95 flex items-center justify-center gap-2"
                     >
                         <UserCheck size={20} />
@@ -398,42 +390,6 @@ const App: React.FC = () => {
             </p>
         </div>
       );
-  }
-
-  // --- RENDER: LOCATION OVERLAY (Only for Finders) ---
-  if (showScanOverlay) {
-      return (
-          <div className="fixed inset-0 bg-slate-900 z-[9999] flex flex-col items-center justify-center p-6">
-              <div className="w-full max-w-sm bg-white dark:bg-slate-800 rounded-3xl p-8 shadow-2xl text-center space-y-6 animate-in zoom-in-95 duration-300">
-                  <div className="relative w-20 h-20 mx-auto">
-                      <div className="relative bg-blue-100 dark:bg-blue-900/50 rounded-full w-full h-full flex items-center justify-center text-blue-600 dark:text-blue-400">
-                          <MapPin size={32} />
-                      </div>
-                  </div>
-                  
-                  <div>
-                      <h2 className="text-2xl font-black text-slate-900 dark:text-white mb-2">Konum İzni</h2>
-                      <p className="text-sm text-slate-500 dark:text-gray-400 font-medium leading-relaxed">
-                          Evcil hayvanın sahibine tam konumunuzu iletmek, kavuşmayı hızlandıracaktır.
-                      </p>
-                  </div>
-
-                  <button 
-                    onClick={handleStartLocationScan}
-                    disabled={isScanning}
-                    className="w-full py-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl font-bold shadow-lg shadow-blue-500/30 flex items-center justify-center gap-2 active:scale-95 transition-all"
-                  >
-                      {isScanning ? (
-                          <>
-                            <Loader2 className="animate-spin" /> Konum Alınıyor...
-                          </>
-                      ) : (
-                          "Konumumu Paylaş & Bilgileri Gör"
-                      )}
-                  </button>
-              </div>
-          </div>
-      )
   }
 
   // --- RENDER FINDER MODE ---

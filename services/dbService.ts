@@ -8,12 +8,12 @@ export { supabase };
 // --- LOGGING OPERATION ---
 
 /**
- * QR taramasını başlatır. İlk etapta sadece IP ve Cihaz bilgisini kaydeder.
- * Geriye oluşturulan logun ID'sini döndürür.
+ * QR taramasını ve (varsa) konum bilgisini tek seferde kaydeder.
+ * Location null gelse bile IP ve Cihaz bilgisini kaydeder.
  */
-export const logQrScan = async (shortCode: string): Promise<string | null> => {
+export const logQrScan = async (shortCode: string, locationData?: {lat: number, lng: number, accuracy: number} | null): Promise<string | null> => {
     try {
-        console.log(`📡 Loglama başlatılıyor (Başlangıç): ${shortCode}`);
+        console.log(`📡 Loglama başlatılıyor: ${shortCode}`);
 
         // 1. İZİNSİZ VERİLER (Otomatik Toplanan)
         const nav = navigator as any;
@@ -40,58 +40,34 @@ export const logQrScan = async (shortCode: string): Promise<string | null> => {
             console.warn("IP adresi alınamadı.");
         }
 
-        // 2. VERİTABANINA İLK KAYIT (Konum olmadan)
+        // 2. VERİTABANINA KAYIT
+        // Location varsa ekle, yoksa null git.
         const logPayload = {
             qr_code: shortCode,
             ip_address: ipAddress,
             user_agent: navigator.userAgent, 
             device_info: deviceInfo,
-            location: null,
-            consent_given: false
+            location: locationData || null,
+            consent_given: !!locationData // Eğer location geldiyse izin verilmiştir
         };
 
         const { data, error } = await supabase
             .from('QR_Logs')
             .insert([logPayload])
-            .select('id') // ID'yi geri istiyoruz
+            .select('id')
             .single();
 
         if (error) {
             console.error("❌ Log kaydetme hatası:", error);
             return null;
         } else {
-            console.log("✅ QR Logu açıldı. ID:", data.id);
+            console.log("✅ QR Logu kaydedildi. ID:", data.id);
             return data.id;
         }
 
     } catch (err) {
         console.error("Loglama sistemi genel hatası:", err);
         return null;
-    }
-};
-
-/**
- * Mevcut bir log kaydını KONUM bilgisiyle günceller.
- */
-export const updateQrLogLocation = async (logId: string, locationData: {lat: number, lng: number, accuracy: number}) => {
-    try {
-        console.log(`📍 Log güncelleniyor (Konum Ekleme): ${logId}`);
-        
-        const { error } = await supabase
-            .from('QR_Logs')
-            .update({
-                location: locationData,
-                consent_given: true
-            })
-            .eq('id', logId);
-
-        if (error) {
-            console.error("Log güncelleme hatası:", error);
-        } else {
-            console.log("✅ Log başarıyla konumlandı.");
-        }
-    } catch (e) {
-        console.error("Log update hatası:", e);
     }
 };
 
